@@ -192,6 +192,22 @@ function getRedisToken() {
   return process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 }
 
+function getBlobStoreId() {
+  const prefixedStoreId = Object.entries(process.env)
+    .find(([name, value]) => name.endsWith("_BLOB_STORE_ID") && value)?.[1];
+  return process.env.BLOB_STORE_ID || prefixedStoreId;
+}
+
+function getBlobReadWriteToken() {
+  const prefixedToken = Object.entries(process.env)
+    .find(([name, value]) => name.endsWith("_BLOB_READ_WRITE_TOKEN") && value)?.[1];
+  return process.env.BLOB_READ_WRITE_TOKEN || prefixedToken;
+}
+
+function hasBlobConfig() {
+  return Boolean(getBlobStoreId() || getBlobReadWriteToken());
+}
+
 function getAdminConfiguration() {
   const missing = [];
   if (adminPassword.length < 16) missing.push("ADMIN_PASSWORD (mínimo 16 caracteres)");
@@ -204,7 +220,7 @@ function getAdminConfiguration() {
   return {
     enabled: missing.length === 0,
     missing,
-    imageUploadsEnabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+    imageUploadsEnabled: !isVercelDeployment || hasBlobConfig(),
   };
 }
 
@@ -410,7 +426,9 @@ async function handleApi(request, response, url) {
     }
     const filename = `${crypto.randomUUID()}${extension}`;
     if (isVercelDeployment) {
-      if (!process.env.BLOB_READ_WRITE_TOKEN) {
+      const storeId = getBlobStoreId();
+      const token = getBlobReadWriteToken();
+      if (!storeId && !token) {
         sendJson(response, 503, { error: "Configure o armazenamento Vercel Blob para enviar fotos." });
         return true;
       }
@@ -420,7 +438,7 @@ async function handleApi(request, response, url) {
           access: "public",
           addRandomSuffix: false,
           contentType: mimeType,
-          token: process.env.BLOB_READ_WRITE_TOKEN,
+          ...(storeId ? { storeId } : { token }),
         });
       } catch (error) {
         const message = error instanceof Error ? error.message : "Erro desconhecido.";

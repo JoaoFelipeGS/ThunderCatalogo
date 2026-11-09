@@ -291,24 +291,35 @@ test("falhas do Vercel Blob retornam erro de configuração sem 500 genérico", 
     response.writeHead(200, { "Content-Type": "application/json" });
     response.end(JSON.stringify({ result }));
   });
-  const blobServer = http.createServer((_request, response) => {
+  const blobRequests = [];
+  const blobServer = http.createServer((request, response) => {
+    blobRequests.push({
+      authorization: request.headers.authorization,
+      storeId: request.headers["x-vercel-blob-store-id"],
+    });
     response.writeHead(403, { "Content-Type": "application/json" });
     response.end(JSON.stringify({ error: { code: "forbidden" } }));
   });
   const redisPort = await listen(redisServer);
   const blobPort = await listen(blobServer);
+  const oidcToken = `${Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url")}.${Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url")}.test-signature`;
   let catalog;
   try {
     catalog = await startCatalog({
       ADMIN_PASSWORD: "uma-senha-forte-de-teste",
       ADMIN_SESSION_SECRET: "segredo-de-sessao-aleatorio-de-teste-123456789",
-      BLOB_READ_WRITE_TOKEN: "test-blob-token",
+      BLOB_READ_WRITE_TOKEN: "vercel_blob_rw_stale-store_stale-token",
+      BLOB_CONNECTION_BLOB_STORE_ID: "store_new-store",
       KV_REST_API_URL: `http://127.0.0.1:${redisPort}`,
       KV_REST_API_TOKEN: "test-redis-token",
       VERCEL_BLOB_API_URL: `http://localhost:${blobPort}`,
       VERCEL_BLOB_RETRIES: "0",
+      VERCEL_OIDC_TOKEN: oidcToken,
       WHATSAPP_NUMBER: "5514991107618",
     });
+
+    const session = await fetch(`${catalog.baseUrl}/api/session`).then((response) => response.json());
+    assert.equal(session.imageUploadsEnabled, true);
 
     const login = await fetch(`${catalog.baseUrl}/api/login`, {
       method: "POST",
@@ -331,7 +342,11 @@ test("falhas do Vercel Blob retornam erro de configuração sem 500 genérico", 
     assert.equal(upload.status, 502);
     const uploadResult = await upload.json();
     assert.match(uploadResult.error, /Blob recusou o token/);
-    assert.doesNotMatch(uploadResult.error, /test-blob-token/);
+    assert.deepEqual(blobRequests, [{
+      authorization: `Bearer ${oidcToken}`,
+      storeId: "new-store",
+    }]);
+    assert.doesNotMatch(uploadResult.error, /stale-token/);
   } finally {
     if (catalog) await stopChild(catalog.child);
     await new Promise((resolve) => redisServer.close(resolve));
