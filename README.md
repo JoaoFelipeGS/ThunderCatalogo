@@ -42,7 +42,7 @@ Se uma variável estiver faltando, a área administrativa permanece desativada e
 
 1. Confirme se a Vercel permite o seu uso comercial. Se estiver autorizado a prosseguir, entre na Vercel e escolha **Add New → Project → Import Git Repository**.
 2. Autorize o acesso ao GitHub e selecione `JoaoFelipeGS/ThunderCatalogo`, branch `main`.
-3. Configure a pasta raiz como `./` e deixe a detecção de projeto sem framework (**Other**). Não defina uma pasta de saída separada nem um comando de build. A Function de API está em `api/[...path].js`; os arquivos do catálogo ficam em `public/`.
+3. Configure a pasta raiz como `./`. O `vercel.json` seleciona o preset **Other** para impedir que a Vercel tente iniciar o projeto como um servidor Node genérico. Não defina uma pasta de saída separada nem um comando de build. A Function de API está em `api/[...path].js`; os arquivos do catálogo ficam em `public/`.
 4. Em **Settings → General → Node.js Version**, selecione Node.js 24, se a opção estiver disponível. O projeto também declara Node.js `24.x` em `package.json`.
 5. Antes do primeiro deploy, adicione em **Settings → Environment Variables** os segredos e o WhatsApp listados acima. Configure o Upstash pelo Marketplace usando os nomes esperados pelo site e conecte o Vercel Blob para disponibilizar `BLOB_READ_WRITE_TOKEN`.
 6. Volte à aba **Deployments** e crie um novo deploy da branch `main` (ou faça **Redeploy**). O primeiro acesso público inicializa o catálogo no Redis com os 24 produtos do repositório.
