@@ -229,18 +229,30 @@ async function redisCommand(...command) {
     throw Object.assign(new Error("Configure o banco Upstash Redis nas variáveis do servidor."), { status: 503 });
   }
   const baseUrl = getRedisUrl().replace(/\/+$/, "");
-  const response = await fetch(baseUrl, {
-    method: "POST",
-    headers: {
+  let response;
+  try {
+    response = await fetch(baseUrl, {
+      method: "POST",
+      headers: {
       Authorization: `Bearer ${getRedisToken()}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(command),
-  });
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(command),
+    });
+  } catch (error) {
+    console.error("Não foi possível conectar ao Upstash Redis:", error instanceof Error ? error.name : "Error");
+    throw Object.assign(new Error("Não foi possível conectar ao Upstash Redis. Confira a integração e tente novamente."), { status: 503 });
+  }
   const result = await response.json().catch(() => ({}));
-  if (!response.ok || result.error) {
-    console.error("A operação no banco do catálogo falhou:", response.status);
-    throw Object.assign(new Error("Não foi possível acessar o armazenamento do catálogo."), { status: 503 });
+  if (!response.ok || result.error || !Object.hasOwn(result, "result")) {
+    const writePermissionDenied = typeof result.error === "string" && /readonly|read.only|permission|not authorized/i.test(result.error);
+    console.error("A operação no Upstash Redis falhou:", response.status, writePermissionDenied ? "write-permission" : "redis-error");
+    throw Object.assign(
+      new Error(writePermissionDenied
+        ? "O Upstash recusou a gravação. Confira se KV_REST_API_TOKEN é o token read/write, e não o read-only, e se está configurado em Production."
+        : "O Upstash não conseguiu concluir a operação. Confira o Runtime Log desta Function e a configuração do Redis."),
+      { status: 503 },
+    );
   }
   return result.result;
 }

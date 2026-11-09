@@ -353,3 +353,87 @@ test("falhas do Vercel Blob retornam erro de configuração sem 500 genérico", 
     await new Promise((resolve) => blobServer.close(resolve));
   }
 });
+
+test("recusa de gravação do Redis informa quando o token é somente leitura", async () => {
+  const records = new Map();
+  const redisServer = http.createServer(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    const [operation, ...args] = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    let result = null;
+    let error = null;
+    if (operation === "GET") result = records.get(args[0]) ?? null;
+    if (operation === "SET") {
+      if (args[0] === "thunder-sthormy:products:v1" && args[2] !== "NX") {
+        error = "READONLY token does not allow write operations";
+      } else if (args[2] === "NX" && records.has(args[0])) {
+        result = null;
+      } else {
+        records.set(args[0], args[1]);
+        result = "OK";
+      }
+    }
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify(error ? { error } : { result }));
+  });
+  const redisPort = await listen(redisServer);
+  let catalog;
+  try {
+    catalog = await startCatalog({
+      ADMIN_PASSWORD: "uma-senha-forte-de-teste",
+      ADMIN_SESSION_SECRET: "segredo-de-sessao-aleatorio-de-teste-123456789",
+      KV_REST_API_URL: `http://127.0.0.1:${redisPort}`,
+      KV_REST_API_TOKEN: "test-read-only-token",
+      WHATSAPP_NUMBER: "5514991107618",
+    });
+
+    const login = await fetch(`${catalog.baseUrl}/api/login`, {
+      method: "POST",
+      headers: { ...vercelHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ password: "uma-senha-forte-de-teste" }),
+    });
+    assert.equal(login.status, 200);
+
+    const save = await fetch(`${catalog.baseUrl}/api/products`, {
+      method: "POST",
+      headers: {
+        ...vercelHeaders({
+          Cookie: login.headers.get("set-cookie").split(";")[0],
+        }),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        title: "Peça de teste",
+        description: "Peça para validar permissão de gravação.",
+        category: "OVERSIZED",
+        color: "Preto",
+        sizes: ["M"],
+        images: ["/assets/products/bermuda-boss-azul.webp"],
+        price: null,
+        active: true,
+      }),
+    });
+    assert.equal(save.status, 503);
+    assert.match((await save.json()).error, /token read\/write/);
+  } finally {
+    if (catalog) await stopChild(catalog.child);
+    await new Promise((resolve) => redisServer.close(resolve));
+  }
+});
+
+test("falha de conexão com o Redis informa que o armazenamento está indisponível", async () => {
+  const catalog = await startCatalog({
+    ADMIN_PASSWORD: "uma-senha-forte-de-teste",
+    ADMIN_SESSION_SECRET: "segredo-de-sessao-aleatorio-de-teste-123456789",
+    KV_REST_API_URL: "http://127.0.0.1:1",
+    KV_REST_API_TOKEN: "test-redis-token",
+    WHATSAPP_NUMBER: "5514991107618",
+  });
+  try {
+    const response = await fetch(`${catalog.baseUrl}/api/products`);
+    assert.equal(response.status, 503);
+    assert.match((await response.json()).error, /conectar ao Upstash Redis/);
+  } finally {
+    await stopChild(catalog.child);
+  }
+});
