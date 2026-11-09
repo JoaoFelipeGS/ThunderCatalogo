@@ -28,9 +28,8 @@ async function stopChild(child) {
   await exited;
 }
 
-async function startCatalog(environment) {
+async function startCatalog(environment, apiEntry = path.join(root, "api", "[...path].js")) {
   const port = await getFreePort();
-  const apiEntry = path.join(root, "api", "[...path].js");
   const runner = `const http=require("node:http");const handler=require(${JSON.stringify(apiEntry)});http.createServer((request,response)=>handler(request,response)).listen(Number(process.env.PORT),"127.0.0.1");`;
   const child = spawn(process.execPath, ["-e", runner], {
     cwd: root,
@@ -446,5 +445,59 @@ test("falha de conexão com o Redis informa que o armazenamento está indisponí
     assert.match((await response.json()).error, /conectar ao Upstash Redis/);
   } finally {
     await stopChild(catalog.child);
+  }
+});
+
+test("a rota explícita permite editar produto com ID slug", async () => {
+  const records = new Map();
+  const redisServer = http.createServer(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    const [operation, ...args] = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    let result = null;
+    if (operation === "GET") result = records.get(args[0]) ?? null;
+    if (operation === "SET") {
+      if (args[2] === "NX" && records.has(args[0])) {
+        result = null;
+      } else {
+        records.set(args[0], args[1]);
+        result = "OK";
+      }
+    }
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ result }));
+  });
+  const redisPort = await listen(redisServer);
+  const idRoute = path.join(root, "api", "products", "[id].js");
+  let catalog;
+  try {
+    catalog = await startCatalog({
+      ADMIN_PASSWORD: "uma-senha-forte-de-teste",
+      ADMIN_SESSION_SECRET: "segredo-de-sessao-aleatorio-de-teste-123456789",
+      KV_REST_API_URL: `http://127.0.0.1:${redisPort}`,
+      KV_REST_API_TOKEN: "test-redis-token",
+      WHATSAPP_NUMBER: "5514991107618",
+    }, idRoute);
+    const products = await fetch(`${catalog.baseUrl}/api/products`).then((response) => response.json());
+    const product = products.find((entry) => entry.id === "bermuda-diesel-azul");
+    records.set("thunder-sthormy:products:v1", JSON.stringify(products));
+
+    const login = await fetch(`${catalog.baseUrl}/api/login`, {
+      method: "POST",
+      headers: { ...vercelHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ password: "uma-senha-forte-de-teste" }),
+    });
+    assert.equal(login.status, 200);
+    const cookie = login.headers.get("set-cookie").split(";")[0];
+    const edited = await fetch(`${catalog.baseUrl}/api/products/${product.id}`, {
+      method: "PUT",
+      headers: { ...vercelHeaders({ Cookie: cookie }), "Content-Type": "application/json" },
+      body: JSON.stringify({ ...product, title: "Bermuda Diesel editada" }),
+    });
+    assert.equal(edited.status, 200);
+    assert.equal((await edited.json()).title, "Bermuda Diesel editada");
+  } finally {
+    if (catalog) await stopChild(catalog.child);
+    await new Promise((resolve) => redisServer.close(resolve));
   }
 });
