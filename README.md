@@ -76,7 +76,7 @@ Instale Node.js 24 e as dependências:
 npm install
 $env:ADMIN_PASSWORD = "uma-senha-local-com-16-caracteres-ou-mais"
 $env:WHATSAPP_NUMBER = "5514991107618"
-node server.js
+node catalog-server.cjs
 ```
 
 Abra `http://localhost:3000`. Os dados cadastrados localmente ficam em `data/products.json` e as fotos em `public/uploads/`. A instalação local não precisa de Redis ou Vercel Blob.
