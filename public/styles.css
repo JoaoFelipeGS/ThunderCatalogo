@@ -223,7 +223,7 @@ button { color: inherit; }
 .product-card { min-width: 0; }
 .product-photo-wrap { position: relative; overflow: hidden; background: #e1e0d9; }
 .product-photo-button { display: block; width: 100%; padding: 0; border: 0; text-align: left; cursor: pointer; }
-.product-photo { display: block; width: 100%; aspect-ratio: 1.28; object-fit: cover; }
+.product-photo { display: block; width: 100%; height: auto; aspect-ratio: 3 / 2; object-fit: contain; background: #e1e0d9; }
 .product-card:hover .product-photo { opacity: .94; }
 .product-label { position: absolute; top: 12px; left: 12px; padding: 7px 9px; background: rgba(255,254,250,.91); color: #35372f; font-size: 8px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
 .product-index { position: absolute; right: 11px; bottom: 11px; color: rgba(255,255,255,.88); font-family: var(--font-display); font-size: 12px; letter-spacing: .1em; text-shadow: 0 1px 5px rgba(0,0,0,.4); }
@@ -372,7 +372,7 @@ dialog::backdrop { background: rgba(11,12,10,.78); backdrop-filter: blur(3px); }
   .category-tabs { gap: 3px; }
   .filter-chip { min-height: 32px; padding: 0 9px; font-size: 9px; }
   .product-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 25px 11px; }
-  .product-photo { aspect-ratio: .86; }
+  .product-photo { aspect-ratio: 3 / 2; }
   .product-label { top: 8px; left: 8px; padding: 6px 7px; font-size: 7px; }
   .product-info { padding-top: 11px; }
   .product-overline { gap: 5px; font-size: 7px; letter-spacing: .08em; }
@@ -404,6 +404,10 @@ dialog::backdrop { background: rgba(11,12,10,.78); backdrop-filter: blur(3px); }
   .admin-product-name strong { font-size: 12px; }
   .admin-product-actions { flex-direction: column; gap: 2px; }
   .text-button { padding: 4px 0; font-size: 9px; }
+}
+
+@media (max-width: 360px) {
+  .product-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 @media (prefers-reduced-motion: reduce) {

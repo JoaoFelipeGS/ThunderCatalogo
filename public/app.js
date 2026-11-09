@@ -119,7 +119,7 @@ function renderProducts() {
     return `
       <article class="product-card">
         <button class="product-photo-wrap product-photo-button" type="button" data-product="${escapeHtml(product.id)}" aria-label="Ver detalhes de ${escapeHtml(product.title)}">
-          <img class="product-photo" src="${escapeHtml(getCatalogImageUrl(firstImage))}" alt="${escapeHtml(product.title)} — ${escapeHtml(product.color)}" width="700" height="467" loading="${index < 3 ? "eager" : "lazy"}" decoding="async" fetchpriority="${index === 0 ? "high" : "auto"}">
+          <img class="product-photo" src="${escapeHtml(getCatalogImageUrl(firstImage))}" alt="${escapeHtml(product.title)} — ${escapeHtml(product.color)}" loading="${index < 3 ? "eager" : "lazy"}" decoding="async" fetchpriority="${index === 0 ? "high" : "auto"}">
           <span class="product-label">${escapeHtml(categoryLabels[product.category] || product.category)}</span>
           ${unavailable}
         </button>
