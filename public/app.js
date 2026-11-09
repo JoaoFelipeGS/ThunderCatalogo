@@ -41,15 +41,28 @@ function normalized(value) {
 }
 
 async function api(url, options = {}) {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      ...(options.body ? { "Content-Type": "application/json" } : {}),
-      ...options.headers,
-    },
-  });
-  const result = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(result.error || "Não foi possível concluir a solicitação.");
+  let response;
+  try {
+    response = await fetch(url, {
+      ...options,
+      headers: {
+        ...(options.body ? { "Content-Type": "application/json" } : {}),
+        ...options.headers,
+      },
+    });
+  } catch {
+    throw new Error(`Não foi possível conectar à API (${url}). Verifique a conexão e tente novamente.`);
+  }
+  const responseText = await response.text();
+  let result = {};
+  try {
+    result = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    result = {};
+  }
+  if (!response.ok) {
+    throw new Error(result.error || `A API respondeu com erro HTTP ${response.status} em ${url}. Consulte o Runtime Log da Vercel.`);
+  }
   return result;
 }
 
