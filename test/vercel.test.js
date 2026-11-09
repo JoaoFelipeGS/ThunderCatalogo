@@ -132,6 +132,18 @@ test("segurança, autenticação e persistência Vercel", async () => {
     }).then((response) => response.json());
     assert.equal(authenticated.authenticated, true);
 
+    const slugProduct = initialProducts.find((product) => product.id === "bermuda-diesel-azul");
+    const editedSlugProduct = await fetch(`${catalog.baseUrl}/api/products/bermuda-diesel-azul`, {
+      method: "PUT",
+      headers: { ...vercelHeaders({ Cookie: cookie }), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...slugProduct,
+        title: "Bermuda Diesel Azul editada",
+      }),
+    });
+    assert.equal(editedSlugProduct.status, 200);
+    assert.equal((await editedSlugProduct.json()).id, "bermuda-diesel-azul");
+
     const unauthorizedUpload = await fetch(`${catalog.baseUrl}/api/images`, {
       method: "POST",
       headers: { ...vercelHeaders(), "Content-Type": "application/json" },

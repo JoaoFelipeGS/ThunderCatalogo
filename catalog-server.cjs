@@ -507,7 +507,7 @@ async function handleApi(request, response, url) {
     return true;
   }
 
-  const productRoute = url.pathname.match(/^\/api\/products(?:\/([a-f0-9-]+))?$/);
+  const productRoute = url.pathname.match(/^\/api\/products(?:\/([a-zA-Z0-9_-]{1,100}))?$/);
   if (!productRoute) return false;
   const productId = productRoute[1];
 
