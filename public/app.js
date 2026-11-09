@@ -302,6 +302,7 @@ function renderDashboard(editProduct = null) {
           </div>
         </div>
         <p class="admin-error" id="product-error" aria-live="polite"></p>
+        <p class="form-help" id="product-status" role="status" aria-live="polite" hidden></p>
         <div class="form-actions">
           <button class="button button-dark button-small" type="submit">${productToEdit ? "Salvar alterações" : "Cadastrar peça"} <span aria-hidden="true">↗</span></button>
           ${productToEdit ? '<button class="text-button" type="button" id="cancel-edit-secondary">Cancelar</button>' : ""}
@@ -357,15 +358,6 @@ function renderPhotoPreview(existingImages = [], selectedFiles = []) {
   preview.innerHTML = persisted + pending || '<span class="form-help">Nenhuma foto selecionada.</span>';
 }
 
-function readAsDataUrl(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(new Error("Não foi possível ler uma das imagens."));
-    reader.readAsDataURL(blob);
-  });
-}
-
 async function optimizeImage(file) {
   if (!file.type.startsWith("image/") || file.size > 15 * 1024 * 1024) {
     throw new Error(`${file.name}: escolha uma imagem de até 15 MB.`);
@@ -383,8 +375,7 @@ async function optimizeImage(file) {
   if (optimized.size > 2 * 1024 * 1024) {
     throw new Error(`${file.name}: a foto otimizada excede 2 MB. Escolha uma imagem menor.`);
   }
-  const dataUrl = await readAsDataUrl(optimized);
-  return { mimeType: optimized.type, data: dataUrl.split(",")[1] };
+  return optimized;
 }
 
 async function saveProduct(event) {
@@ -393,6 +384,8 @@ async function saveProduct(event) {
   const form = event.currentTarget;
   const submitButton = form.querySelector('button[type="submit"]');
   const error = adminContent.querySelector("#product-error");
+  const status = adminContent.querySelector("#product-status");
+  const submitLabel = submitButton.textContent.trim();
   const formData = new FormData(form);
   const selectedFiles = [...form.querySelector("#product-photos").files];
   const replaceImages = Boolean(formData.get("replace-images"));
@@ -411,14 +404,22 @@ async function saveProduct(event) {
 
   submitButton.disabled = true;
   try {
-    for (const file of selectedFiles) {
+    for (const [index, file] of selectedFiles.entries()) {
+      status.hidden = false;
+      status.textContent = `Preparando foto ${index + 1} de ${selectedFiles.length}...`;
       const image = await optimizeImage(file);
-      const uploaded = await api("/api/images", {
+      status.textContent = `Enviando foto ${index + 1} de ${selectedFiles.length}...`;
+      const response = await fetch("/api/images", {
         method: "POST",
-        body: JSON.stringify(image),
+        headers: { "Content-Type": image.type },
+        body: image,
       });
+      const uploaded = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(uploaded.error || "Não foi possível enviar a foto.");
       imagePaths.push(uploaded.path);
     }
+    status.hidden = false;
+    status.textContent = "Salvando os dados da peça...";
     const product = {
       title: formData.get("title"),
       category: formData.get("category"),
@@ -433,11 +434,14 @@ async function saveProduct(event) {
       method: editingId ? "PUT" : "POST",
       body: JSON.stringify(product),
     });
+    status.textContent = "Atualizando o catálogo...";
     await loadProducts();
     await openDashboard();
     showToast(wasEditing ? "Peça atualizada com sucesso." : "Peça cadastrada com sucesso.");
   } catch (errorValue) {
     error.textContent = errorValue.message;
+    status.hidden = true;
+    submitButton.textContent = submitLabel;
     submitButton.disabled = false;
   }
 }

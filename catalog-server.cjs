@@ -44,6 +44,32 @@ if (whatsappNumber.length < 10 || whatsappNumber.length > 15) {
   throw new Error("WHATSAPP_NUMBER precisa incluir o código do país e o DDD.");
 }
 
+function readBuffer(request, maxBytes) {
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let size = 0;
+    let tooLarge = false;
+    request.on("data", (chunk) => {
+      if (tooLarge) return;
+      size += chunk.length;
+      if (size > maxBytes) {
+        tooLarge = true;
+        chunks.length = 0;
+        return;
+      }
+      chunks.push(chunk);
+    });
+    request.on("end", () => {
+      if (tooLarge) {
+        reject(Object.assign(new Error("O envio excede o limite permitido."), { status: 413 }));
+        return;
+      }
+      resolve(Buffer.concat(chunks));
+    });
+    request.on("error", reject);
+  });
+}
+
 function sendJson(response, status, value, extraHeaders = {}) {
   response.writeHead(status, {
     "Cache-Control": "no-store",
@@ -424,15 +450,24 @@ async function handleApi(request, response, url) {
 
   if (url.pathname === "/api/images" && request.method === "POST") {
     if (!await requireAdmin(request, response)) return true;
-    const body = await readJson(request, maxImageRequestBytes);
-    const mimeType = cleanText(body.mimeType, 30);
-    const extension = { "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp" }[mimeType];
-    if (!extension || typeof body.data !== "string" || body.data.length > Math.ceil(maxImageBytes * 4 / 3) + 8) {
-      sendJson(response, 400, { error: "Formato de imagem inválido. Use JPG, PNG ou WEBP." });
-      return true;
+    const requestMimeType = String(request.headers["content-type"] || "").split(";", 1)[0].trim().toLowerCase();
+    const imageMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    let mimeType;
+    let image;
+    if (imageMimeTypes.has(requestMimeType)) {
+      mimeType = requestMimeType;
+      image = await readBuffer(request, maxImageBytes);
+    } else {
+      const body = await readJson(request, maxImageRequestBytes);
+      mimeType = cleanText(body.mimeType, 30);
+      if (!imageMimeTypes.has(mimeType) || typeof body.data !== "string" || body.data.length > Math.ceil(maxImageBytes * 4 / 3) + 8) {
+        sendJson(response, 400, { error: "Formato de imagem inválido. Use JPG, PNG ou WEBP." });
+        return true;
+      }
+      image = Buffer.from(body.data, "base64");
     }
-    const image = Buffer.from(body.data, "base64");
-    if (!image.length || image.length > maxImageBytes || !imageHasValidSignature(image, mimeType)) {
+    const extension = { "image/jpeg": ".jpg", "image/png": ".png", "image/webp": ".webp" }[mimeType];
+    if (!extension || !image.length || image.length > maxImageBytes || !imageHasValidSignature(image, mimeType)) {
       sendJson(response, 400, { error: "A imagem é inválida ou excede 2 MB." });
       return true;
     }

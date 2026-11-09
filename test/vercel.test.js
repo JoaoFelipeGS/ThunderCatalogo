@@ -331,13 +331,12 @@ test("falhas do Vercel Blob retornam erro de configuração sem 500 genérico", 
     const upload = await fetch(`${catalog.baseUrl}/api/images`, {
       method: "POST",
       headers: {
-        ...vercelHeaders({ Cookie: login.headers.get("set-cookie").split(";")[0] }),
-        "Content-Type": "application/json",
+        ...vercelHeaders({
+          Cookie: login.headers.get("set-cookie").split(";")[0],
+          "Content-Type": "image/webp",
+        }),
       },
-      body: JSON.stringify({
-        mimeType: "image/webp",
-        data: Buffer.from("RIFF0000WEBP").toString("base64"),
-      }),
+      body: Buffer.from("RIFF0000WEBP"),
     });
     assert.equal(upload.status, 502);
     const uploadResult = await upload.json();
