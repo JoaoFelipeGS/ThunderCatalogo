@@ -1,0 +1,21 @@
+{
+  "name": "thunder-sthormy-catalogo",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": "24.x"
+  },
+  "description": "Catálogo de roupas Thunder Sthormy com pedidos pelo WhatsApp",
+  "scripts": {
+    "start": "node server.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "@vercel/blob": "^2.9.0"
+  },
+  "overrides": {
+    "@vercel/oidc": {
+      "@vercel/cli-config": "0.3.8"
+    }
+  }
+}

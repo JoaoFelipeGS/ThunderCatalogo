@@ -1,0 +1,94 @@
+# Thunder Sthormy — catálogo
+
+Catálogo responsivo de roupas com busca, filtros por categoria, fotos, tamanhos e pedidos pelo WhatsApp. A área da loja permite cadastrar, editar, ocultar e excluir peças.
+
+## Atenção ao plano Vercel Hobby
+
+A documentação oficial da Vercel restringe o plano gratuito Hobby a uso pessoal e não comercial. Como este site divulga uma loja e recebe pedidos, confirme os termos antes de colocá-lo no ar: para uso comercial, escolha um plano permitido (como Pro) ou uma hospedagem gratuita que autorize expressamente esse uso. Não publique a loja comercial no Hobby contando com uma exceção.
+
+O site foi preparado para as Functions da Vercel, mas os recursos de cadastro precisam de armazenamento persistente externo. Não use arquivos locais de Function para guardar produtos ou fotos: esse disco não é o banco de dados do site.
+
+## Configurar a senha do admin antes de publicar
+
+1. Crie uma senha exclusiva, longa e não usada em nenhum outro serviço. Ela deve ter pelo menos 16 caracteres.
+2. Gere um segredo de sessão aleatório no PowerShell:
+
+   ```powershell
+   node -e "console.log(require('node:crypto').randomBytes(32).toString('base64url'))"
+   ```
+
+3. Na Vercel, abra o projeto em **Settings → Environment Variables** e adicione:
+
+   | Nome | Valor |
+   | --- | --- |
+   | `ADMIN_PASSWORD` | A senha longa e exclusiva escolhida |
+   | `ADMIN_SESSION_SECRET` | O segredo aleatório gerado no passo 2 |
+   | `WHATSAPP_NUMBER` | Número com código do país e DDD; somente dígitos, por exemplo `5514991107618` |
+
+   Marque como **Sensitive/Secret** quando disponível. Cadastre segredos somente para **Production**; só compartilhe os mesmos segredos com **Preview** se realmente precisar e confiar em quem acessa as prévias.
+
+4. O catálogo precisa de um banco persistente para registrar as alterações:
+   - Crie uma base **Upstash Redis** pelo Marketplace/Integration da Vercel. No plano gratuito atual da Upstash, a documentação lista 250 MB e 500 mil comandos por mês; consulte os limites atuais antes de depender deles.
+   - Conecte a base ao projeto ou copie as credenciais REST da base e cadastre como Secrets: `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`. Use o token de escrita apenas no servidor; nunca o exponha em código do navegador.
+   - O primeiro acesso inicializa a chave do catálogo no Redis com as 24 peças que vêm neste repositório.
+
+5. Para guardar fotos novas, crie e conecte um **Vercel Blob Store** ao projeto. A integração disponibiliza `BLOB_READ_WRITE_TOKEN`; mantenha esse token somente no servidor. As fotos enviadas ficam públicas para que apareçam no catálogo.
+6. Após adicionar ou alterar variáveis e integrações, faça um novo deploy para que as Functions recebam a configuração.
+7. Abra o endereço publicado, clique em **Área da loja**, entre com `ADMIN_PASSWORD` e teste o cadastro de uma peça e de uma foto. A senha nunca é escrita no catálogo nem enviada ao público; o admin exige sessão assinada, cookie `HttpOnly`, `SameSite=Strict`, HTTPS e proteção contra tentativas repetidas.
+
+Se uma variável estiver faltando, a área administrativa permanece desativada em vez de aceitar uma configuração incompleta.
+
+## Importar o projeto do GitHub para a Vercel
+
+1. Confirme se a Vercel permite o seu uso comercial. Se estiver autorizado a prosseguir, entre na Vercel e escolha **Add New → Project → Import Git Repository**.
+2. Autorize o acesso ao GitHub e selecione `JoaoFelipeGS/ThunderCatalogo`, branch `main`.
+3. Configure a pasta raiz como `./` e deixe a detecção de projeto sem framework (**Other**). Não defina uma pasta de saída separada nem um comando de build. A Function de API está em `api/[...path].js`; os arquivos do catálogo ficam em `public/`.
+4. Em **Settings → General → Node.js Version**, selecione Node.js 24, se a opção estiver disponível. O projeto também declara Node.js `24.x` em `package.json`.
+5. Antes do primeiro deploy, adicione em **Settings → Environment Variables** os segredos e o WhatsApp listados acima. Configure o Upstash pelo Marketplace usando os nomes esperados pelo site e conecte o Vercel Blob para disponibilizar `BLOB_READ_WRITE_TOKEN`.
+6. Volte à aba **Deployments** e crie um novo deploy da branch `main` (ou faça **Redeploy**). O primeiro acesso público inicializa o catálogo no Redis com os 24 produtos do repositório.
+7. Abra o endereço `.vercel.app` gerado e confirme que as peças aparecem. No rodapé, abra **Área da loja**, entre com sua senha e cadastre uma peça de teste; confirme que ela continua no catálogo após recarregar ou fazer um novo deploy. Exclua a peça de teste.
+8. Teste o pedido: abra uma peça, selecione um tamanho e use o botão do WhatsApp. Confirme no WhatsApp que o destinatário corresponde a `WHATSAPP_NUMBER`.
+
+Como o repositório é público, o código, as fotos da coleção e os dados iniciais do catálogo poderão ser vistos e clonados por qualquer pessoa. Isso não expõe os segredos: as credenciais reais ficam somente no painel da Vercel. Não torne o repositório privado ou público inadvertidamente; mantenha em **Public** apenas se estiver de acordo com a divulgação das fotos e do catálogo.
+
+## Atualizar o site após uma mudança
+
+Altere e teste o projeto localmente, faça um commit e envie-o à branch `main`. A integração GitHub/Vercel cria o deploy de produção correspondente. Mudanças nas variáveis de ambiente também precisam de um novo deploy. Não coloque as variáveis reais nos commits, em issues ou no chat.
+
+## Variáveis necessárias
+
+```text
+ADMIN_PASSWORD=
+ADMIN_SESSION_SECRET=
+WHATSAPP_NUMBER=5514991107618
+UPSTASH_REDIS_REST_URL=
+UPSTASH_REDIS_REST_TOKEN=
+BLOB_READ_WRITE_TOKEN=
+```
+
+`.env` e outros arquivos locais de variáveis são ignorados pelo Git. Nunca cole valores reais de senha, sessão, Upstash ou Blob no código, em capturas de tela ou no chat.
+
+## Rodar localmente
+
+Instale Node.js 24 e as dependências:
+
+```powershell
+npm install
+$env:ADMIN_PASSWORD = "uma-senha-local-com-16-caracteres-ou-mais"
+$env:WHATSAPP_NUMBER = "5514991107618"
+node server.js
+```
+
+Abra `http://localhost:3000`. Os dados cadastrados localmente ficam em `data/products.json` e as fotos em `public/uploads/`. A instalação local não precisa de Redis ou Vercel Blob.
+
+## Imagens e backups
+
+As 24 peças iniciais e as fotos otimizadas vêm da pasta de anúncios fornecida. Fotos novas são convertidas para WebP de até 2 MB; na hospedagem, são guardadas no Blob, e localmente, em `public/uploads/`. Na documentação atual, a franquia do Blob Hobby lista 1 GB de armazenamento, 10.000 operações simples, 2.000 avançadas e 10 GB de transferência; a franquia pode mudar e parte é compartilhada com os outros serviços do projeto. Faça backups do banco e do armazenamento de fotos e teste a restauração. Acompanhe as cotas do Blob e do Upstash no painel para evitar interrupções.
+
+## Documentação oficial consultada
+
+- [Plano Hobby e limites de uso](https://vercel.com/docs/plans/hobby)
+- [Variáveis de ambiente na Vercel](https://vercel.com/docs/environment-variables)
+- [Vercel Functions para Node.js](https://vercel.com/docs/functions/runtimes/node-js)
+- [Vercel Blob: limites e preços](https://vercel.com/docs/vercel-blob/usage-and-pricing)
+- [Upstash Redis: limites e preços do plano gratuito](https://upstash.com/docs/redis/overall/billing)

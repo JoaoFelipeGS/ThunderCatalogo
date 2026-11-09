@@ -1,0 +1,365 @@
+[
+  {
+    "id": "bermuda-boss-azul",
+    "title": "Boss",
+    "category": "BERMUDA",
+    "color": "Azul",
+    "description": "Modelo bermuda na cor azul. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "GG"
+    ],
+    "images": [
+      "/assets/products/bermuda-boss-azul.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "bermuda-boss-bege-claro",
+    "title": "Boss",
+    "category": "BERMUDA",
+    "color": "Bege claro",
+    "description": "Modelo bermuda na cor bege claro. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "G"
+    ],
+    "images": [
+      "/assets/products/bermuda-boss-bege-claro.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "bermuda-boss-cinza",
+    "title": "Boss",
+    "category": "BERMUDA",
+    "color": "Cinza",
+    "description": "Modelo bermuda na cor cinza. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "M"
+    ],
+    "images": [
+      "/assets/products/bermuda-boss-cinza.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "bermuda-diesel-azul",
+    "title": "Diesel",
+    "category": "BERMUDA",
+    "color": "Azul",
+    "description": "Modelo bermuda na cor azul. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "G"
+    ],
+    "images": [
+      "/assets/products/bermuda-diesel-azul.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "bermuda-diesel-azul-claro",
+    "title": "Diesel",
+    "category": "BERMUDA",
+    "color": "Azul claro",
+    "description": "Modelo bermuda na cor azul claro. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "GG"
+    ],
+    "images": [
+      "/assets/products/bermuda-diesel-azul-claro.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "bermuda-diesel-preta",
+    "title": "Diesel",
+    "category": "BERMUDA",
+    "color": "Preta",
+    "description": "Modelo bermuda na cor preta. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "M"
+    ],
+    "images": [
+      "/assets/products/bermuda-diesel-preta.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "bermuda-jordan-azul",
+    "title": "Jordan",
+    "category": "BERMUDA",
+    "color": "Azul",
+    "description": "Modelo bermuda na cor azul. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "M"
+    ],
+    "images": [
+      "/assets/products/bermuda-jordan-azul.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "oversized-balenciaga-preta",
+    "title": "Balenciaga",
+    "category": "OVERSIZED",
+    "color": "Preta",
+    "description": "Modelo oversized na cor preta. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "P",
+      "M"
+    ],
+    "images": [
+      "/assets/products/oversized-balenciaga-preta.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "oversized-jordan-bege",
+    "title": "Jordan",
+    "category": "OVERSIZED",
+    "color": "Bege",
+    "description": "Modelo oversized na cor bege. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "P"
+    ],
+    "images": [
+      "/assets/products/oversized-jordan-bege.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "oversized-jordan-branca-red",
+    "title": "Jordan",
+    "category": "OVERSIZED",
+    "color": "Branca / vermelho",
+    "description": "Modelo oversized na cor branca / vermelho. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "G"
+    ],
+    "images": [
+      "/assets/products/oversized-jordan-branca-red.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "oversized-jordan-preta-red",
+    "title": "Jordan",
+    "category": "OVERSIZED",
+    "color": "Preta / vermelho",
+    "description": "Modelo oversized na cor preta / vermelho. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "G"
+    ],
+    "images": [
+      "/assets/products/oversized-jordan-preta-red.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "oversized-nike-bege",
+    "title": "Nike",
+    "category": "OVERSIZED",
+    "color": "Bege",
+    "description": "Modelo oversized na cor bege. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "G"
+    ],
+    "images": [
+      "/assets/products/oversized-nike-bege.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "oversized-nike-branca",
+    "title": "Nike",
+    "category": "OVERSIZED",
+    "color": "Branca",
+    "description": "Modelo oversized na cor branca. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "P",
+      "M"
+    ],
+    "images": [
+      "/assets/products/oversized-nike-branca.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "oversized-nike-cinza",
+    "title": "Nike",
+    "category": "OVERSIZED",
+    "color": "Cinza",
+    "description": "Modelo oversized na cor cinza. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "G"
+    ],
+    "images": [
+      "/assets/products/oversized-nike-cinza.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "oversized-nike-vermelha",
+    "title": "Nike",
+    "category": "OVERSIZED",
+    "color": "Vermelha",
+    "description": "Modelo oversized na cor vermelha. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "M"
+    ],
+    "images": [
+      "/assets/products/oversized-nike-vermelha.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "peruana-aramis-azul",
+    "title": "Aramis",
+    "category": "PERUANA",
+    "color": "Azul",
+    "description": "Modelo peruana na cor azul. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "P"
+    ],
+    "images": [
+      "/assets/products/peruana-aramis-azul.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "peruana-boss-branca",
+    "title": "Boss",
+    "category": "PERUANA",
+    "color": "Branca",
+    "description": "Modelo peruana na cor branca. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "P",
+      "M"
+    ],
+    "images": [
+      "/assets/products/peruana-boss-branca.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "peruana-colcci-branca",
+    "title": "Colcci",
+    "category": "PERUANA",
+    "color": "Branca",
+    "description": "Modelo peruana na cor branca. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "G"
+    ],
+    "images": [
+      "/assets/products/peruana-colcci-branca.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "peruana-ea7-bege",
+    "title": "EA7",
+    "category": "PERUANA",
+    "color": "Bege",
+    "description": "Modelo peruana na cor bege. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "M"
+    ],
+    "images": [
+      "/assets/products/peruana-ea7-bege.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "peruana-ea7-vermelha",
+    "title": "EA7",
+    "category": "PERUANA",
+    "color": "Vermelha",
+    "description": "Modelo peruana na cor vermelha. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "G"
+    ],
+    "images": [
+      "/assets/products/peruana-ea7-vermelha.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "peruana-polo-preta",
+    "title": "Polo",
+    "category": "PERUANA",
+    "color": "Preta",
+    "description": "Modelo peruana na cor preta. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "M"
+    ],
+    "images": [
+      "/assets/products/peruana-polo-preta.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "peruana-zara-bege",
+    "title": "Zara",
+    "category": "PERUANA",
+    "color": "Bege",
+    "description": "Modelo peruana na cor bege. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "P"
+    ],
+    "images": [
+      "/assets/products/peruana-zara-bege.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "peruana-zara-branca",
+    "title": "Zara",
+    "category": "PERUANA",
+    "color": "Branca",
+    "description": "Modelo peruana na cor branca. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "G"
+    ],
+    "images": [
+      "/assets/products/peruana-zara-branca.webp"
+    ],
+    "price": null,
+    "active": true
+  },
+  {
+    "id": "peruana-zara-cinza",
+    "title": "Zara",
+    "category": "PERUANA",
+    "color": "Cinza",
+    "description": "Modelo peruana na cor cinza. Consulte disponibilidade e detalhes pelo WhatsApp.",
+    "sizes": [
+      "G"
+    ],
+    "images": [
+      "/assets/products/peruana-zara-cinza.webp"
+    ],
+    "price": null,
+    "active": true
+  }
+]

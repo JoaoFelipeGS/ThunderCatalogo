@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#000000">
+    <meta name="description" content="Conheça o catálogo Thunder Sthormy, escolha sua peça e faça seu pedido pelo WhatsApp.">
+    <title>Thunder Sthormy — Catálogo</title>
+    <link rel="icon" href="/assets/logo-thunder.jpg?v=2">
+    <link rel="stylesheet" href="/styles.css?v=3">
+    <script src="/app.js?v=3" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#" aria-label="Thunder Sthormy, início">
+        <img src="/assets/logo-thunder.jpg?v=2" alt="Thunder Sthormy Clothes">
+      </a>
+      <nav class="main-nav" aria-label="Navegação principal">
+        <a href="#colecao">Peças</a>
+      </nav>
+      <a class="header-cta" href="#colecao">Ver catálogo</a>
+    </header>
+
+    <main>
+      <section class="collection section-shell" id="colecao" aria-labelledby="collection-title">
+        <div class="section-heading">
+          <div>
+            <h1 id="collection-title">Catálogo</h1>
+          </div>
+          <p class="section-description">Escolha sua peça e faça seu pedido pelo WhatsApp.</p>
+        </div>
+
+        <div class="catalog-controls">
+          <div class="category-tabs" role="group" aria-label="Filtrar por categoria">
+            <button class="filter-chip is-selected" type="button" data-category="TODAS">Todas <span data-count="TODAS"></span></button>
+            <button class="filter-chip" type="button" data-category="OVERSIZED">Oversized <span data-count="OVERSIZED"></span></button>
+            <button class="filter-chip" type="button" data-category="PERUANA">Peruana <span data-count="PERUANA"></span></button>
+            <button class="filter-chip" type="button" data-category="BERMUDA">Bermudas <span data-count="BERMUDA"></span></button>
+          </div>
+          <label class="search-box">
+            <span class="sr-only">Buscar peça</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg>
+            <input id="product-search" type="search" placeholder="Buscar peça..." autocomplete="off">
+          </label>
+        </div>
+
+        <div class="catalog-status" id="catalog-status" role="status" aria-live="polite"></div>
+        <div class="product-grid" id="product-grid"></div>
+        <div class="empty-state" id="empty-state" hidden>
+          <span class="empty-icon" aria-hidden="true">⌕</span>
+          <h3>Nenhuma peça por aqui.</h3>
+          <p>Tente outro termo ou escolha uma categoria diferente.</p>
+        </div>
+      </section>
+
+    </main>
+
+    <footer class="site-footer">
+      <a class="footer-brand" href="#" aria-label="Thunder Sthormy">
+        <img src="/assets/logo-thunder.jpg?v=2" alt="">
+      </a>
+      <p>Thunder Sthormy Clothes</p>
+      <span class="footer-copy">© <span id="current-year"></span> THUNDER STHORMY</span>
+      <button class="admin-link" id="admin-open" type="button">Área da loja</button>
+    </footer>
+
+    <dialog class="product-dialog" id="product-dialog" aria-labelledby="detail-title">
+      <button class="dialog-close" type="button" data-close-dialog aria-label="Fechar detalhes">×</button>
+      <div id="product-detail"></div>
+    </dialog>
+
+    <dialog class="admin-dialog" id="admin-dialog" aria-labelledby="admin-title">
+      <button class="dialog-close" type="button" data-close-dialog aria-label="Fechar área da loja">×</button>
+      <div id="admin-content"></div>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>
