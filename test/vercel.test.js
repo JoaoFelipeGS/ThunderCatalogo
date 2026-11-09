@@ -272,3 +272,69 @@ test("o admin Vercel permanece fechado sem os segredos e os storages", async () 
     await stopChild(catalog.child);
   }
 });
+
+test("falhas do Vercel Blob retornam erro de configuração sem 500 genérico", async () => {
+  const records = new Map();
+  const redisServer = http.createServer(async (request, response) => {
+    const chunks = [];
+    for await (const chunk of request) chunks.push(chunk);
+    const [operation, ...args] = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    let result = null;
+    if (operation === "GET") result = records.get(args[0]) ?? null;
+    if (operation === "SET") {
+      if (args[2] !== "NX" || !records.has(args[0])) {
+        records.set(args[0], args[1]);
+        result = "OK";
+      }
+    }
+    if (operation === "DEL") result = Number(records.delete(args[0]));
+    response.writeHead(200, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ result }));
+  });
+  const blobServer = http.createServer((_request, response) => {
+    response.writeHead(403, { "Content-Type": "application/json" });
+    response.end(JSON.stringify({ error: { code: "forbidden" } }));
+  });
+  const redisPort = await listen(redisServer);
+  const blobPort = await listen(blobServer);
+  let catalog;
+  try {
+    catalog = await startCatalog({
+      ADMIN_PASSWORD: "uma-senha-forte-de-teste",
+      ADMIN_SESSION_SECRET: "segredo-de-sessao-aleatorio-de-teste-123456789",
+      BLOB_READ_WRITE_TOKEN: "test-blob-token",
+      KV_REST_API_URL: `http://127.0.0.1:${redisPort}`,
+      KV_REST_API_TOKEN: "test-redis-token",
+      VERCEL_BLOB_API_URL: `http://localhost:${blobPort}`,
+      VERCEL_BLOB_RETRIES: "0",
+      WHATSAPP_NUMBER: "5514991107618",
+    });
+
+    const login = await fetch(`${catalog.baseUrl}/api/login`, {
+      method: "POST",
+      headers: { ...vercelHeaders(), "Content-Type": "application/json" },
+      body: JSON.stringify({ password: "uma-senha-forte-de-teste" }),
+    });
+    assert.equal(login.status, 200);
+
+    const upload = await fetch(`${catalog.baseUrl}/api/images`, {
+      method: "POST",
+      headers: {
+        ...vercelHeaders({ Cookie: login.headers.get("set-cookie").split(";")[0] }),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        mimeType: "image/webp",
+        data: Buffer.from("RIFF0000WEBP").toString("base64"),
+      }),
+    });
+    assert.equal(upload.status, 502);
+    const uploadResult = await upload.json();
+    assert.match(uploadResult.error, /Blob recusou o token/);
+    assert.doesNotMatch(uploadResult.error, /test-blob-token/);
+  } finally {
+    if (catalog) await stopChild(catalog.child);
+    await new Promise((resolve) => redisServer.close(resolve));
+    await new Promise((resolve) => blobServer.close(resolve));
+  }
+});

@@ -414,12 +414,26 @@ async function handleApi(request, response, url) {
         sendJson(response, 503, { error: "Configure o armazenamento Vercel Blob para enviar fotos." });
         return true;
       }
-      const blob = await put(`products/${filename}`, image, {
-        access: "public",
-        addRandomSuffix: false,
-        contentType: mimeType,
-        token: process.env.BLOB_READ_WRITE_TOKEN,
-      });
+      let blob;
+      try {
+        blob = await put(`products/${filename}`, image, {
+          access: "public",
+          addRandomSuffix: false,
+          contentType: mimeType,
+          token: process.env.BLOB_READ_WRITE_TOKEN,
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : "Erro desconhecido.";
+        const safeMessage = message.replaceAll(process.env.BLOB_READ_WRITE_TOKEN, "[REDACTED]");
+        console.error("O upload para Vercel Blob falhou:", error?.name || "Error", safeMessage);
+        const accessDenied = /access denied|valid token/i.test(message);
+        sendJson(response, 502, {
+          error: accessDenied
+            ? "O Vercel Blob recusou o token. Reconecte o Blob Store ao projeto, confira BLOB_READ_WRITE_TOKEN em Production e faça um novo deploy."
+            : "O Vercel Blob não conseguiu salvar a foto. Confira o Runtime Log desta Function e a configuração do Blob Store.",
+        });
+        return true;
+      }
       sendJson(response, 201, { path: blob.url });
       return true;
     }
