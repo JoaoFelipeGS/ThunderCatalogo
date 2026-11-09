@@ -68,6 +68,14 @@ function formatPrice(price) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(price);
 }
 
+function getCatalogImageUrl(image) {
+  const assetPrefix = "/assets/products/";
+  if (typeof image !== "string" || !image.startsWith(assetPrefix)) return image;
+  const fileName = image.slice(assetPrefix.length);
+  if (!fileName.endsWith(".webp") || fileName.includes("/")) return image;
+  return `${assetPrefix}thumbs/${fileName}`;
+}
+
 function getVisibleProducts() {
   const query = normalized(searchInput.value.trim());
   return products.filter((product) => {
@@ -110,7 +118,7 @@ function renderProducts() {
     return `
       <article class="product-card">
         <button class="product-photo-wrap product-photo-button" type="button" data-product="${escapeHtml(product.id)}" aria-label="Ver detalhes de ${escapeHtml(product.title)}">
-          <img class="product-photo" src="${firstImage}" alt="${escapeHtml(product.title)} — ${escapeHtml(product.color)}" loading="${index < 3 ? "eager" : "lazy"}">
+          <img class="product-photo" src="${escapeHtml(getCatalogImageUrl(firstImage))}" alt="${escapeHtml(product.title)} — ${escapeHtml(product.color)}" width="700" height="467" loading="${index < 3 ? "eager" : "lazy"}" decoding="async" fetchpriority="${index === 0 ? "high" : "auto"}">
           <span class="product-label">${escapeHtml(categoryLabels[product.category] || product.category)}</span>
           ${unavailable}
         </button>
@@ -143,7 +151,7 @@ function openProduct(productId) {
         <img class="detail-main-image" id="detail-main-image" src="${escapeHtml(images[0] || "")}" alt="${escapeHtml(product.title)} — ${escapeHtml(product.color)}">
         ${images.length > 1 ? `<div class="detail-thumbnails">${images.map((image, index) => `
           <button class="detail-thumb ${index === 0 ? "is-active" : ""}" type="button" data-image="${escapeHtml(image)}" aria-label="Ver foto ${index + 1}">
-            <img src="${escapeHtml(image)}" alt="">
+            <img src="${escapeHtml(getCatalogImageUrl(image))}" alt="" loading="lazy" decoding="async">
           </button>`).join("")}</div>` : ""}
       </div>
       <div class="detail-copy">
@@ -361,14 +369,14 @@ async function optimizeImage(file) {
     throw new Error(`${file.name}: escolha uma imagem de até 15 MB.`);
   }
   const image = await createImageBitmap(file);
-  const maxDimension = 1400;
+  const maxDimension = 900;
   const scale = Math.min(1, maxDimension / Math.max(image.width, image.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(image.width * scale);
   canvas.height = Math.round(image.height * scale);
   canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
   image.close();
-  const optimized = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", .78));
+  const optimized = await new Promise((resolve) => canvas.toBlob(resolve, "image/webp", .72));
   if (!optimized) throw new Error(`Não foi possível otimizar ${file.name}.`);
   if (optimized.size > 2 * 1024 * 1024) {
     throw new Error(`${file.name}: a foto otimizada excede 2 MB. Escolha uma imagem menor.`);

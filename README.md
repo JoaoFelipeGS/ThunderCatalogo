@@ -85,7 +85,7 @@ Abra `http://localhost:3000`. Os dados cadastrados localmente ficam em `data/pro
 
 ## Imagens e backups
 
-As 24 peças iniciais e as fotos otimizadas vêm da pasta de anúncios fornecida. Fotos novas são convertidas para WebP de até 2 MB; na hospedagem, são guardadas no Blob, e localmente, em `public/uploads/`. Na documentação atual, a franquia do Blob Hobby lista 1 GB de armazenamento, 10.000 operações simples, 2.000 avançadas e 10 GB de transferência; a franquia pode mudar e parte é compartilhada com os outros serviços do projeto. Faça backups do banco e do armazenamento de fotos e teste a restauração. Acompanhe as cotas do Blob e do Upstash no painel para evitar interrupções.
+As 24 peças iniciais e as fotos otimizadas vêm da pasta de anúncios fornecida. O catálogo usa miniaturas WebP de 700 px para as fotos dos cartões e carrega a foto maior apenas ao abrir os detalhes. Novas fotos são reduzidas para no máximo 900 px e convertidas para WebP; na hospedagem, são guardadas no Blob, e localmente, em `public/uploads/`. Na documentação atual, a franquia do Blob Hobby lista 1 GB de armazenamento, 10.000 operações simples, 2.000 avançadas e 10 GB de transferência; a franquia pode mudar e parte é compartilhada com os outros serviços do projeto. Faça backups do banco e do armazenamento de fotos e teste a restauração. Acompanhe as cotas do Blob e do Upstash no painel para evitar interrupções.
 
 ## Documentação oficial consultada
 
