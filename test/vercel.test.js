@@ -91,7 +91,6 @@ test("segurança, autenticação e persistência Vercel", async () => {
     catalog = await startCatalog({
       ADMIN_PASSWORD: "uma-senha-forte-de-teste",
       ADMIN_SESSION_SECRET: "segredo-de-sessao-aleatorio-de-teste-123456789",
-      BLOB_READ_WRITE_TOKEN: "test-blob-token",
       KV_REST_API_URL: `http://127.0.0.1:${redisPort}`,
       KV_REST_API_TOKEN: "test-redis-token",
       WHATSAPP_NUMBER: "5514991107618",
@@ -105,6 +104,7 @@ test("segurança, autenticação e persistência Vercel", async () => {
     const session = await sessionResponse.json();
     assert.equal(session.adminEnabled, true);
     assert.equal(session.authenticated, false);
+    assert.equal(session.imageUploadsEnabled, false);
     assert.match(sessionResponse.headers.get("content-security-policy"), /frame-ancestors 'none'/);
     assert.equal(sessionResponse.headers.get("strict-transport-security"), "max-age=31536000; includeSubDomains");
 
@@ -171,6 +171,41 @@ test("segurança, autenticação e persistência Vercel", async () => {
     });
     assert.equal(saved.status, 201);
     assert.equal(records.has("thunder-sthormy:products:v1"), true);
+    const savedProduct = await saved.json();
+
+    const edited = await fetch(`${catalog.baseUrl}/api/products/${savedProduct.id}`, {
+      method: "PUT",
+      headers: { ...vercelHeaders({ Cookie: cookie }), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        ...savedProduct,
+        title: "Peça editada",
+        description: "Descrição atualizada pelo teste automatizado.",
+        color: "Branco",
+      }),
+    });
+    assert.equal(edited.status, 200);
+    assert.equal((await edited.json()).title, "Peça editada");
+
+    const deleted = await fetch(`${catalog.baseUrl}/api/products/${savedProduct.id}`, {
+      method: "DELETE",
+      headers: vercelHeaders({ Cookie: cookie }),
+    });
+    assert.equal(deleted.status, 200);
+    assert.deepEqual(await deleted.json(), { deleted: true });
+    const productsAfterDelete = await fetch(`${catalog.baseUrl}/api/products`, {
+      headers: { Cookie: cookie },
+    }).then((response) => response.json());
+    assert.equal(productsAfterDelete.some((product) => product.id === savedProduct.id), false);
+
+    const unavailableImageUpload = await fetch(`${catalog.baseUrl}/api/images`, {
+      method: "POST",
+      headers: { ...vercelHeaders({ Cookie: cookie }), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mimeType: "image/webp",
+        data: Buffer.from("RIFF0000WEBP").toString("base64"),
+      }),
+    });
+    assert.equal(unavailableImageUpload.status, 503);
 
     const logout = await fetch(`${catalog.baseUrl}/api/logout`, {
       method: "POST",
@@ -225,7 +260,7 @@ test("o admin Vercel permanece fechado sem os segredos e os storages", async () 
     const session = await fetch(`${catalog.baseUrl}/api/session`).then((response) => response.json());
     assert.equal(session.adminEnabled, false);
     assert.match(session.missing.join(" "), /UPSTASH_REDIS_REST_URL/);
-    assert.match(session.missing.join(" "), /BLOB_READ_WRITE_TOKEN/);
+    assert.equal(session.imageUploadsEnabled, false);
 
     const login = await fetch(`${catalog.baseUrl}/api/login`, {
       method: "POST",

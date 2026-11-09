@@ -32,11 +32,11 @@ O site foi preparado para as Functions da Vercel, mas os recursos de cadastro pr
    - Conecte a base ao projeto. A integração Upstash cria `KV_REST_API_URL` e `KV_REST_API_TOKEN`, que o catálogo reconhece automaticamente. Se cadastrar as credenciais manualmente, também pode usar `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`. Use o token de escrita apenas no servidor; nunca o exponha em código do navegador. Não use `KV_REST_API_READ_ONLY_TOKEN`, pois o catálogo precisa gravar dados.
    - O primeiro acesso inicializa a chave do catálogo no Redis com as 24 peças que vêm neste repositório.
 
-5. Para guardar fotos novas, crie e conecte um **Vercel Blob Store** ao projeto. A integração disponibiliza `BLOB_READ_WRITE_TOKEN`; mantenha esse token somente no servidor. As fotos enviadas ficam públicas para que apareçam no catálogo.
+5. Para guardar fotos novas, crie e conecte um **Vercel Blob Store** ao projeto. A integração disponibiliza `BLOB_READ_WRITE_TOKEN`; mantenha esse token somente no servidor. As fotos enviadas ficam públicas para que apareçam no catálogo. Sem Blob, ainda é possível entrar no admin, editar e excluir peças e manter as fotos existentes; o envio de fotos novas fica indisponível.
 6. Após adicionar ou alterar variáveis e integrações, faça um novo deploy para que as Functions recebam a configuração.
 7. Abra o endereço publicado, clique em **Área da loja**, entre com `ADMIN_PASSWORD` e teste o cadastro de uma peça e de uma foto. A senha nunca é escrita no catálogo nem enviada ao público; o admin exige sessão assinada, cookie `HttpOnly`, `SameSite=Strict`, HTTPS e proteção contra tentativas repetidas.
 
-Se uma variável estiver faltando, a área administrativa permanece desativada em vez de aceitar uma configuração incompleta.
+Sem `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET` ou Redis, a área administrativa permanece desativada. O Blob é necessário apenas para enviar fotos novas.
 
 ## Importar o projeto do GitHub para a Vercel
 

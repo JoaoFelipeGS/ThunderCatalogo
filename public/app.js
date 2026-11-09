@@ -15,6 +15,7 @@ let toastTimer;
 let editingId = null;
 let adminProducts = [];
 let previewObjectUrls = [];
+let imageUploadsEnabled = true;
 
 const categoryLabels = {
   BERMUDA: "Bermuda",
@@ -253,6 +254,7 @@ function renderDashboard(editProduct = null) {
         </div>
         <button class="text-button" type="button" id="admin-logout">Sair da conta</button>
       </div>
+      ${imageUploadsEnabled ? "" : '<p class="login-unavailable" role="status">Edição e exclusão estão disponíveis. Para enviar fotos novas, configure o armazenamento Vercel Blob.</p>'}
       <form class="admin-form" id="product-form">
         <div class="admin-products-head">
           <h3>${productToEdit ? "Editar peça" : "Nova peça"}</h3>
@@ -473,6 +475,7 @@ async function openAdmin() {
   adminContent.innerHTML = '<div class="admin-wrap"><p class="admin-subtitle">Carregando área da loja...</p></div>';
   try {
     const session = await api("/api/session");
+    imageUploadsEnabled = session.imageUploadsEnabled;
     if (!session.adminEnabled) {
       adminContent.innerHTML = `
         <div class="admin-wrap">

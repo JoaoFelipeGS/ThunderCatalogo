@@ -201,8 +201,11 @@ function getAdminConfiguration() {
   if (isVercelDeployment && !hasRedisConfig()) {
     missing.push("UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN ou KV_REST_API_URL/KV_REST_API_TOKEN");
   }
-  if (isVercelDeployment && !process.env.BLOB_READ_WRITE_TOKEN) missing.push("BLOB_READ_WRITE_TOKEN");
-  return { enabled: missing.length === 0, missing };
+  return {
+    enabled: missing.length === 0,
+    missing,
+    imageUploadsEnabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+  };
 }
 
 async function redisCommand(...command) {
@@ -320,6 +323,7 @@ async function handleApi(request, response, url) {
     sendJson(response, 200, {
       authenticated: configuration.enabled && await getSession(request),
       adminEnabled: configuration.enabled,
+      imageUploadsEnabled: configuration.imageUploadsEnabled,
       missing: configuration.missing,
     });
     return true;
