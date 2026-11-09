@@ -92,8 +92,8 @@ test("segurança, autenticação e persistência Vercel", async () => {
       ADMIN_PASSWORD: "uma-senha-forte-de-teste",
       ADMIN_SESSION_SECRET: "segredo-de-sessao-aleatorio-de-teste-123456789",
       BLOB_READ_WRITE_TOKEN: "test-blob-token",
-      UPSTASH_REDIS_REST_URL: `http://127.0.0.1:${redisPort}`,
-      UPSTASH_REDIS_REST_TOKEN: "test-redis-token",
+      KV_REST_API_URL: `http://127.0.0.1:${redisPort}`,
+      KV_REST_API_TOKEN: "test-redis-token",
       WHATSAPP_NUMBER: "5514991107618",
     });
 

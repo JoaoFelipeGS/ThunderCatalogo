@@ -29,7 +29,7 @@ O site foi preparado para as Functions da Vercel, mas os recursos de cadastro pr
 
 4. O catálogo precisa de um banco persistente para registrar as alterações:
    - Crie uma base **Upstash Redis** pelo Marketplace/Integration da Vercel. No plano gratuito atual da Upstash, a documentação lista 250 MB e 500 mil comandos por mês; consulte os limites atuais antes de depender deles.
-   - Conecte a base ao projeto ou copie as credenciais REST da base e cadastre como Secrets: `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`. Use o token de escrita apenas no servidor; nunca o exponha em código do navegador.
+   - Conecte a base ao projeto. A integração Upstash cria `KV_REST_API_URL` e `KV_REST_API_TOKEN`, que o catálogo reconhece automaticamente. Se cadastrar as credenciais manualmente, também pode usar `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN`. Use o token de escrita apenas no servidor; nunca o exponha em código do navegador. Não use `KV_REST_API_READ_ONLY_TOKEN`, pois o catálogo precisa gravar dados.
    - O primeiro acesso inicializa a chave do catálogo no Redis com as 24 peças que vêm neste repositório.
 
 5. Para guardar fotos novas, crie e conecte um **Vercel Blob Store** ao projeto. A integração disponibiliza `BLOB_READ_WRITE_TOKEN`; mantenha esse token somente no servidor. As fotos enviadas ficam públicas para que apareçam no catálogo.
@@ -44,7 +44,7 @@ Se uma variável estiver faltando, a área administrativa permanece desativada e
 2. Autorize o acesso ao GitHub e selecione `JoaoFelipeGS/ThunderCatalogo`, branch `main`.
 3. Configure a pasta raiz como `./`. O `vercel.json` seleciona o preset **Other** para impedir que a Vercel tente iniciar o projeto como um servidor Node genérico. Não defina uma pasta de saída separada nem um comando de build. A Function de API está em `api/[...path].js`; os arquivos do catálogo ficam em `public/`.
 4. Em **Settings → General → Node.js Version**, selecione Node.js 24, se a opção estiver disponível. O projeto também declara Node.js `24.x` em `package.json`.
-5. Antes do primeiro deploy, adicione em **Settings → Environment Variables** os segredos e o WhatsApp listados acima. Configure o Upstash pelo Marketplace usando os nomes esperados pelo site e conecte o Vercel Blob para disponibilizar `BLOB_READ_WRITE_TOKEN`.
+5. Antes do primeiro deploy, adicione em **Settings → Environment Variables** os segredos e o WhatsApp listados acima. As variáveis `KV_REST_API_URL` e `KV_REST_API_TOKEN` criadas pela integração Upstash são reconhecidas pelo site; conecte também o Vercel Blob para disponibilizar `BLOB_READ_WRITE_TOKEN`.
 6. Volte à aba **Deployments** e crie um novo deploy da branch `main` (ou faça **Redeploy**). O primeiro acesso público inicializa o catálogo no Redis com os 24 produtos do repositório.
 7. Abra o endereço `.vercel.app` gerado e confirme que as peças aparecem. No rodapé, abra **Área da loja**, entre com sua senha e cadastre uma peça de teste; confirme que ela continua no catálogo após recarregar ou fazer um novo deploy. Exclua a peça de teste.
 8. Teste o pedido: abra uma peça, selecione um tamanho e use o botão do WhatsApp. Confirme no WhatsApp que o destinatário corresponde a `WHATSAPP_NUMBER`.
@@ -61,10 +61,12 @@ Altere e teste o projeto localmente, faça um commit e envie-o à branch `main`.
 ADMIN_PASSWORD=
 ADMIN_SESSION_SECRET=
 WHATSAPP_NUMBER=5514991107618
-UPSTASH_REDIS_REST_URL=
-UPSTASH_REDIS_REST_TOKEN=
+KV_REST_API_URL=
+KV_REST_API_TOKEN=
 BLOB_READ_WRITE_TOKEN=
 ```
+
+As variáveis `UPSTASH_REDIS_REST_URL` e `UPSTASH_REDIS_REST_TOKEN` também são aceitas como nomes alternativos para o Redis.
 
 `.env` e outros arquivos locais de variáveis são ignorados pelo Git. Nunca cole valores reais de senha, sessão, Upstash ou Blob no código, em capturas de tela ou no chat.
 

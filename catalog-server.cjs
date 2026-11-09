@@ -181,7 +181,15 @@ function isAllowedImagePath(value) {
 }
 
 function hasRedisConfig() {
-  return Boolean(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN);
+  return Boolean(getRedisUrl() && getRedisToken());
+}
+
+function getRedisUrl() {
+  return process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL;
+}
+
+function getRedisToken() {
+  return process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN;
 }
 
 function getAdminConfiguration() {
@@ -191,7 +199,7 @@ function getAdminConfiguration() {
     missing.push("ADMIN_SESSION_SECRET (segredo aleatório de pelo menos 32 caracteres)");
   }
   if (isVercelDeployment && !hasRedisConfig()) {
-    missing.push("UPSTASH_REDIS_REST_URL e UPSTASH_REDIS_REST_TOKEN");
+    missing.push("UPSTASH_REDIS_REST_URL/UPSTASH_REDIS_REST_TOKEN ou KV_REST_API_URL/KV_REST_API_TOKEN");
   }
   if (isVercelDeployment && !process.env.BLOB_READ_WRITE_TOKEN) missing.push("BLOB_READ_WRITE_TOKEN");
   return { enabled: missing.length === 0, missing };
@@ -201,11 +209,11 @@ async function redisCommand(...command) {
   if (!hasRedisConfig()) {
     throw Object.assign(new Error("Configure o banco Upstash Redis nas variáveis do servidor."), { status: 503 });
   }
-  const baseUrl = process.env.UPSTASH_REDIS_REST_URL.replace(/\/+$/, "");
+  const baseUrl = getRedisUrl().replace(/\/+$/, "");
   const response = await fetch(baseUrl, {
     method: "POST",
     headers: {
-      Authorization: `Bearer ${process.env.UPSTASH_REDIS_REST_TOKEN}`,
+      Authorization: `Bearer ${getRedisToken()}`,
       "Content-Type": "application/json",
     },
     body: JSON.stringify(command),
