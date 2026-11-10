@@ -11,8 +11,14 @@ const categoryLabels = {
 let products = [];
 let imageUploadsEnabled = false;
 let editingId = null;
+let editingImages = [];
 let previewUrls = [];
 let toastTimer;
+
+productDialog.addEventListener("close", () => {
+  previewUrls.forEach((url) => URL.revokeObjectURL(url));
+  previewUrls = [];
+});
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -242,50 +248,81 @@ function renderProductRows() {
 
 function openProductForm(product = null) {
   editingId = product?.id || null;
-  const currentImages = product?.images || [];
+  editingImages = [...(product?.images || [])];
   productDialog.innerHTML = `
     <div class="product-form-wrap">
       <div class="form-heading">
-        <div><p class="eyebrow">${product ? "Editar estoque" : "Novo cadastro"}</p><h2 id="form-title">${product ? "Editar peça" : "Cadastrar peça"}</h2></div>
+        <div class="form-heading-copy">
+          <p class="eyebrow">Painel da loja <span>/</span> ${product ? "Editar produto" : "Novo produto"}</p>
+          <h2 id="form-title">${product ? "Editar peça" : "Cadastrar peça"}</h2>
+          <p>${product ? "Atualize os dados e as fotos deste anúncio." : "Preencha os detalhes da nova peça para o catálogo."}</p>
+        </div>
         <button class="close-button" type="button" id="close-product-form" aria-label="Fechar">×</button>
       </div>
       <form id="product-form">
-        <div class="form-grid">
-          <div class="field"><label for="product-title">Nome da peça</label><input id="product-title" name="title" maxlength="80" required value="${escapeHtml(product?.title || "")}" placeholder="Ex.: Camiseta Essential"></div>
-          <div class="field"><label for="product-category">Categoria</label><select id="product-category" name="category" required>
-            ${Object.entries(categoryLabels).map(([value, label]) => `<option value="${value}" ${product?.category === value ? "selected" : ""}>${label}</option>`).join("")}
-          </select></div>
-          <div class="field"><label for="product-color">Cor</label><input id="product-color" name="color" maxlength="50" required value="${escapeHtml(product?.color || "")}" placeholder="Ex.: Preto"></div>
-          <div class="field"><label for="product-sizes">Tamanhos</label><input id="product-sizes" name="sizes" maxlength="120" value="${escapeHtml((product?.sizes || []).join(", "))}" placeholder="P, M, G, GG"></div>
-          <div class="field full"><label for="product-description">Descrição</label><textarea id="product-description" name="description" maxlength="1000" required placeholder="Descreva os detalhes da peça.">${escapeHtml(product?.description || "")}</textarea></div>
-          <div class="field"><label for="product-price">Preço (opcional)</label><input id="product-price" name="price" type="number" min="0.01" max="10000000" step="0.01" value="${product?.price ? escapeHtml(product.price) : ""}" placeholder="Deixe vazio para consultar"></div>
-          <div class="field"><label for="product-photos">Fotos (até 6)</label><input id="product-photos" name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple ${imageUploadsEnabled ? "" : "disabled"}><span class="field-help">JPG, PNG ou WEBP. Cada imagem será otimizada antes do envio.</span></div>
-          <div class="field full"><span class="field-help">Fotos atuais / selecionadas</span><div class="photo-preview" id="photo-preview"></div>
-            ${product ? '<label class="check-field"><input type="checkbox" name="replace-images"> Substituir fotos atuais pelas novas</label>' : ""}
+        <section class="form-section" aria-labelledby="product-details-heading">
+          <div class="form-section-heading"><span>01</span><h3 id="product-details-heading">Informações da peça</h3></div>
+          <div class="form-grid">
+            <div class="field"><label for="product-title">Nome da peça</label><input id="product-title" name="title" maxlength="80" required value="${escapeHtml(product?.title || "")}" placeholder="Ex.: Camiseta Essential"></div>
+            <div class="field"><label for="product-category">Categoria</label><select id="product-category" name="category" required>
+              ${Object.entries(categoryLabels).map(([value, label]) => `<option value="${value}" ${product?.category === value ? "selected" : ""}>${label}</option>`).join("")}
+            </select></div>
+            <div class="field"><label for="product-color">Cor</label><input id="product-color" name="color" maxlength="50" required value="${escapeHtml(product?.color || "")}" placeholder="Ex.: Preto"></div>
+            <div class="field"><label for="product-sizes">Tamanhos</label><input id="product-sizes" name="sizes" maxlength="120" value="${escapeHtml((product?.sizes || []).join(", "))}" placeholder="P, M, G, GG"></div>
+            <div class="field full"><label for="product-description">Descrição</label><textarea id="product-description" name="description" maxlength="1000" required placeholder="Descreva os detalhes da peça.">${escapeHtml(product?.description || "")}</textarea></div>
+            <div class="field"><label for="product-price">Preço (opcional)</label><input id="product-price" name="price" type="number" min="0.01" max="10000000" step="0.01" value="${product?.price ? escapeHtml(product.price) : ""}" placeholder="Deixe vazio para consultar"></div>
           </div>
-          <div class="field full"><label class="check-field"><input type="checkbox" name="active" ${product?.active === false ? "" : "checked"}> Disponível no estoque e no catálogo</label></div>
-        </div>
+        </section>
+        <section class="form-section" aria-labelledby="product-photos-heading">
+          <div class="form-section-heading"><span>02</span><h3 id="product-photos-heading">Fotos do anúncio</h3></div>
+          <div class="field">
+            <label for="product-photos">Adicionar fotos</label>
+            <input id="product-photos" name="photos" type="file" accept="image/jpeg,image/png,image/webp" multiple ${imageUploadsEnabled ? "" : "disabled"}>
+            <span class="field-help">JPG, PNG ou WEBP. Até 6 fotos no total; cada foto nova será otimizada antes do envio.</span>
+          </div>
+          <div class="photo-gallery" id="photo-preview" aria-live="polite"></div>
+        </section>
+        <section class="form-section form-stock-section">
+          <div class="form-section-heading"><span>03</span><h3>Disponibilidade</h3></div>
+          <label class="check-field"><input type="checkbox" name="active" ${product?.active === false ? "" : "checked"}> Disponível no estoque e no catálogo</label>
+        </section>
         <p class="form-error" id="product-error" role="alert"></p>
         <p class="form-status" id="product-status" role="status" aria-live="polite" hidden></p>
         <div class="form-actions"><button class="button" type="submit">${product ? "Salvar alterações" : "Cadastrar peça"} <span aria-hidden="true">↗</span></button><button class="button button-light" type="button" id="cancel-product-form">Cancelar</button></div>
       </form>
     </div>`;
-  renderPhotoPreview(currentImages);
+  renderPhotoPreview();
   productDialog.showModal();
   productDialog.querySelector("#close-product-form").addEventListener("click", () => productDialog.close());
   productDialog.querySelector("#cancel-product-form").addEventListener("click", () => productDialog.close());
   productDialog.querySelector("#product-photos").addEventListener("change", (event) => {
-    renderPhotoPreview(currentImages, [...event.target.files]);
+    renderPhotoPreview([...event.target.files]);
+  });
+  productDialog.querySelector("#photo-preview").addEventListener("click", (event) => {
+    const removeButton = event.target.closest("[data-remove-image]");
+    if (!removeButton) return;
+    editingImages.splice(Number(removeButton.dataset.removeImage), 1);
+    renderPhotoPreview([...productDialog.querySelector("#product-photos").files]);
   });
   productDialog.querySelector("#product-form").addEventListener("submit", saveProduct);
 }
 
-function renderPhotoPreview(currentImages, selectedFiles = []) {
+function renderPhotoPreview(selectedFiles = []) {
   previewUrls.forEach((url) => URL.revokeObjectURL(url));
   previewUrls = selectedFiles.map((file) => URL.createObjectURL(file));
-  const persisted = currentImages.map((image) => `<div class="photo-preview-item"><img src="${escapeHtml(image)}" alt=""></div>`).join("");
-  const pending = selectedFiles.map((file, index) => `<div class="photo-preview-item"><img src="${previewUrls[index]}" alt="${escapeHtml(file.name)}"></div>`).join("");
-  productDialog.querySelector("#photo-preview").innerHTML = persisted + pending || '<span class="field-help">Nenhuma foto selecionada.</span>';
+  const persisted = editingImages.map((image, index) => `
+    <figure class="photo-preview-item">
+      <img src="${escapeHtml(image)}" alt="Foto ${index + 1} da peça">
+      <figcaption>Foto ${index + 1}</figcaption>
+      <button class="remove-photo" type="button" data-remove-image="${index}" aria-label="Remover foto ${index + 1}" title="Remover foto">×</button>
+    </figure>`).join("");
+  const pending = selectedFiles.map((file, index) => `
+    <figure class="photo-preview-item is-new">
+      <img src="${previewUrls[index]}" alt="${escapeHtml(file.name)}">
+      <figcaption>Nova foto</figcaption>
+    </figure>`).join("");
+  productDialog.querySelector("#photo-preview").innerHTML = persisted + pending
+    || '<p class="photo-empty">Nenhuma foto adicionada. Selecione uma imagem para este anúncio.</p>';
 }
 
 async function optimizeImage(file) {
@@ -316,8 +353,7 @@ async function saveProduct(event) {
   const formData = new FormData(form);
   const selectedFiles = [...form.querySelector("#product-photos").files];
   const currentProduct = editingId ? products.find((entry) => entry.id === editingId) : null;
-  const replaceImages = Boolean(formData.get("replace-images"));
-  const imagePaths = replaceImages ? [] : [...(currentProduct?.images || [])];
+  const imagePaths = [...(currentProduct ? editingImages : [])];
   error.textContent = "";
   if (imagePaths.length + selectedFiles.length > 6) {
     error.textContent = "O limite é de 6 fotos por peça.";
