@@ -37,7 +37,7 @@ try {
 } catch (error) {
   console.warn("Não foi possível recuperar a preferência de tema salva.", error);
 }
-applyTheme(savedTheme === "dark" ? "dark" : "light");
+applyTheme(savedTheme === "light" ? "light" : "dark");
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
