@@ -112,7 +112,7 @@ button { color: inherit; }
   content: "";
   pointer-events: none;
   transform: translateX(-120%);
-  animation: banner-sheen 5s .65s ease-in-out infinite;
+  animation: banner-sheen 3s .65s ease-in-out infinite;
 }
 
 .site-banner img {
@@ -130,7 +130,7 @@ button { color: inherit; }
 
 @keyframes banner-sheen {
   0% { transform: translateX(-120%); }
-  35%, 100% { transform: translateX(120%); }
+  45%, 100% { transform: translateX(120%); }
 }
 
 .hero {
