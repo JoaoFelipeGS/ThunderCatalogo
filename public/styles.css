@@ -28,6 +28,10 @@
   --photo-bg: #222222;
 }
 
+:root {
+  --banner-bg: #000000;
+}
+
 * { box-sizing: border-box; }
 
 html { scroll-behavior: smooth; }
@@ -109,6 +113,17 @@ button { color: inherit; }
 .theme-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.6; }
 .theme-icon-sun, :root[data-theme="dark"] .theme-icon-moon { display: none; }
 :root[data-theme="dark"] .theme-icon-sun { display: block; }
+
+.site-banner {
+  overflow: hidden;
+  background: var(--banner-bg);
+}
+
+.site-banner img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
 
 .hero {
   position: relative;
