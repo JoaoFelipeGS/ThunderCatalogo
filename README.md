@@ -1,6 +1,6 @@
 # Thunder Sthormy — catálogo
 
-Catálogo responsivo de roupas com busca, filtros por categoria, fotos, tamanhos e pedidos pelo WhatsApp. A área da loja permite cadastrar, editar, ocultar e excluir peças.
+Catálogo responsivo de roupas com busca, filtros por categoria, fotos, tamanhos e pedidos pelo WhatsApp. O painel administrativo separado, em `/admin`, permite controlar a disponibilidade do estoque e cadastrar, editar ou excluir peças.
 
 ## Atenção ao plano Vercel Hobby
 
@@ -34,7 +34,7 @@ O site foi preparado para as Functions da Vercel, mas os recursos de cadastro pr
 
 5. Para guardar fotos novas, crie e conecte um **Vercel Blob Store público** ao projeto. A conexão fornece autenticação gerenciada por OIDC e o ID do armazenamento; o catálogo reconhece `BLOB_STORE_ID` ou um nome de variável personalizado terminado em `_BLOB_STORE_ID` e prefere esse método ao token estático. Também aceita `BLOB_READ_WRITE_TOKEN` (ou uma variável personalizada terminada em `_BLOB_READ_WRITE_TOKEN`) como alternativa. Mantenha credenciais somente no servidor. As fotos enviadas ficam públicas para que apareçam no catálogo. Sem uma conexão/credencial Blob, ainda é possível entrar no admin, editar e excluir peças e manter as fotos existentes; o envio de fotos novas fica indisponível. Se o upload for recusado, confirme que o Blob Store é público, está conectado a este projeto e ao ambiente **Production**; depois faça um novo deploy.
 6. Após adicionar ou alterar variáveis e integrações, faça um novo deploy para que as Functions recebam a configuração.
-7. Abra o endereço publicado, clique em **Área da loja**, entre com `ADMIN_PASSWORD` e teste o cadastro de uma peça e de uma foto. A senha nunca é escrita no catálogo nem enviada ao público; o admin exige sessão assinada, cookie `HttpOnly`, `SameSite=Strict`, HTTPS e proteção contra tentativas repetidas.
+7. Abra `/admin` no endereço publicado, entre com `ADMIN_PASSWORD` e teste o cadastro de uma peça e de uma foto. O painel mostra o estoque e permite marcar peças como disponíveis ou sem estoque. A senha nunca é escrita no catálogo nem enviada ao público; o admin exige sessão assinada, cookie `HttpOnly`, `SameSite=Strict`, HTTPS e proteção contra tentativas repetidas.
 
 Sem `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET` ou Redis, a área administrativa permanece desativada. O Blob é necessário apenas para enviar fotos novas.
 
@@ -46,7 +46,7 @@ Sem `ADMIN_PASSWORD`, `ADMIN_SESSION_SECRET` ou Redis, a área administrativa pe
 4. Em **Settings → General → Node.js Version**, selecione Node.js 24, se a opção estiver disponível. O projeto também declara Node.js `24.x` em `package.json`.
 5. Antes do primeiro deploy, adicione em **Settings → Environment Variables** os segredos e o WhatsApp listados acima. As variáveis `KV_REST_API_URL` e `KV_REST_API_TOKEN` criadas pela integração Upstash são reconhecidas pelo site; conecte também o Vercel Blob para disponibilizar `BLOB_READ_WRITE_TOKEN`.
 6. Volte à aba **Deployments** e crie um novo deploy da branch `main` (ou faça **Redeploy**). O primeiro acesso público inicializa o catálogo no Redis com os 24 produtos do repositório.
-7. Abra o endereço `.vercel.app` gerado e confirme que as peças aparecem. No rodapé, abra **Área da loja**, entre com sua senha e cadastre uma peça de teste; confirme que ela continua no catálogo após recarregar ou fazer um novo deploy. Exclua a peça de teste.
+7. Abra o endereço `.vercel.app` gerado e confirme que as peças aparecem. Acesse `/admin`, entre com sua senha e cadastre uma peça de teste; confirme que ela continua no catálogo após recarregar ou fazer um novo deploy. Exclua a peça de teste.
 8. Teste o pedido: abra uma peça, selecione um tamanho e use o botão do WhatsApp. Confirme no WhatsApp que o destinatário corresponde a `WHATSAPP_NUMBER`.
 
 Como o repositório é público, o código, as fotos da coleção e os dados iniciais do catálogo poderão ser vistos e clonados por qualquer pessoa. Isso não expõe os segredos: as credenciais reais ficam somente no painel da Vercel. Não torne o repositório privado ou público inadvertidamente; mantenha em **Public** apenas se estiver de acordo com a divulgação das fotos e do catálogo.

@@ -574,7 +574,11 @@ async function serveStatic(request, response, pathname) {
     sendJson(response, 400, { error: "Endereço inválido." });
     return;
   }
-  const relativePath = decodedPath === "/" ? "index.html" : decodedPath.replace(/^\/+/, "");
+  const relativePath = decodedPath === "/"
+    ? "index.html"
+    : decodedPath === "/admin" || decodedPath === "/admin/"
+      ? path.join("admin", "index.html")
+      : decodedPath.replace(/^\/+/, "");
   const filePath = path.resolve(publicRoot, relativePath);
   if (!filePath.startsWith(`${publicRoot}${path.sep}`)) {
     sendJson(response, 403, { error: "Acesso negado." });

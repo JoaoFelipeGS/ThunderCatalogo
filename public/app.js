@@ -525,7 +525,6 @@ productGrid.addEventListener("click", (event) => {
   const button = event.target.closest("[data-product]");
   if (button) openProduct(button.dataset.product);
 });
-document.querySelector("#admin-open").addEventListener("click", openAdmin);
 document.querySelectorAll("[data-close-dialog]").forEach((button) => {
   button.addEventListener("click", () => button.closest("dialog").close());
 });
