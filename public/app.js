@@ -7,6 +7,7 @@ const productDetail = document.querySelector("#product-detail");
 const adminDialog = document.querySelector("#admin-dialog");
 const adminContent = document.querySelector("#admin-content");
 const toast = document.querySelector("#toast");
+const themeToggle = document.querySelector("#theme-toggle");
 
 let products = [];
 let selectedCategory = "TODAS";
@@ -22,6 +23,21 @@ const categoryLabels = {
   OVERSIZED: "Oversized",
   PERUANA: "Peruana",
 };
+
+function applyTheme(theme) {
+  const isDark = theme === "dark";
+  document.documentElement.dataset.theme = isDark ? "dark" : "light";
+  themeToggle.setAttribute("aria-pressed", String(isDark));
+  themeToggle.setAttribute("aria-label", isDark ? "Ativar modo claro" : "Ativar modo escuro");
+}
+
+let savedTheme = null;
+try {
+  savedTheme = localStorage.getItem("thunder-catalog-theme");
+} catch (error) {
+  console.warn("Não foi possível recuperar a preferência de tema salva.", error);
+}
+applyTheme(savedTheme === "dark" ? "dark" : "light");
 
 function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (character) => ({
@@ -527,6 +543,15 @@ productGrid.addEventListener("click", (event) => {
 });
 document.querySelectorAll("[data-close-dialog]").forEach((button) => {
   button.addEventListener("click", () => button.closest("dialog").close());
+});
+themeToggle.addEventListener("click", () => {
+  const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+  applyTheme(nextTheme);
+  try {
+    localStorage.setItem("thunder-catalog-theme", nextTheme);
+  } catch (error) {
+    console.warn("Não foi possível salvar a preferência de tema.", error);
+  }
 });
 document.querySelector("#current-year").textContent = String(new Date().getFullYear());
 

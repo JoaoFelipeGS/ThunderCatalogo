@@ -1,6 +1,6 @@
 # Thunder Sthormy — catálogo
 
-Catálogo responsivo de roupas em preto e branco, com busca, filtros por categoria, fotos, tamanhos e pedidos pelo WhatsApp. O painel administrativo separado, em `/admin`, permite controlar a disponibilidade do estoque e cadastrar, editar ou excluir peças; durante a edição, fotos existentes podem ser removidas individualmente.
+Catálogo responsivo de roupas com modos claro e escuro, busca, filtros por categoria, fotos, tamanhos e pedidos pelo WhatsApp. A preferência de tema fica salva no navegador. A logo fica centralizada na barra superior, que também inclui o botão de troca de tema. O painel administrativo separado, em `/admin`, permite controlar a disponibilidade do estoque e cadastrar, editar ou excluir peças; durante a edição, fotos existentes podem ser removidas individualmente.
 
 ## Atenção ao plano Vercel Hobby
 
