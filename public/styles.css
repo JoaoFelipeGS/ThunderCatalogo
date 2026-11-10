@@ -112,7 +112,7 @@ button { color: inherit; }
   content: "";
   pointer-events: none;
   transform: translateX(-120%);
-  animation: banner-sheen 1.8s .65s ease-out both;
+  animation: banner-sheen 5s .65s ease-in-out infinite;
 }
 
 .site-banner img {
@@ -129,7 +129,8 @@ button { color: inherit; }
 }
 
 @keyframes banner-sheen {
-  to { transform: translateX(120%); }
+  0% { transform: translateX(-120%); }
+  35%, 100% { transform: translateX(120%); }
 }
 
 .hero {
@@ -241,7 +242,7 @@ button { color: inherit; }
 .hero-bottom a { color: var(--lime); }
 .hero-bottom a span { padding-left: 7px; font-size: 14px; }
 
-.section-shell { min-height: calc(100vh - 194px); padding: 64px 10.1% 84px; }
+.section-shell { min-height: calc(100vh - 194px); padding: 24px 10.1% 84px; }
 .section-heading { display: flex; align-items: end; justify-content: space-between; margin-bottom: 30px; }
 .section-heading .eyebrow { margin-bottom: 14px; }
 .section-heading h1 { margin: 0; font-size: clamp(32px, 4vw, 42px); font-weight: 700; letter-spacing: -.035em; line-height: 1.1; }
@@ -404,7 +405,7 @@ dialog::backdrop { background: rgba(11,12,10,.78); backdrop-filter: blur(3px); }
 @media (max-width: 620px) {
   .site-header { height: 56px; padding: 0 5%; }
   .theme-toggle { right: 5%; width: 36px; height: 36px; }
-  .section-shell { padding: 40px 6% 56px; }
+  .section-shell { padding: 18px 6% 56px; }
   .section-heading { align-items: flex-start; flex-direction: column; gap: 6px; margin-bottom: 20px; }
   .section-heading h1 { font-size: 31px; }
   .section-description { margin-top: 0; font-size: 10px; text-align: left; }
