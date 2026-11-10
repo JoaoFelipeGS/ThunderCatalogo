@@ -1,6 +1,6 @@
 # Thunder Sthormy — catálogo
 
-Catálogo responsivo de roupas com banner metálico da marca otimizado em WebP, modos claro e escuro, busca, filtros por categoria, fotos, tamanhos e pedidos pelo WhatsApp. A preferência de tema fica salva no navegador. A logo fica centralizada na barra superior, que também inclui o botão de troca de tema. O painel administrativo separado, em `/admin`, permite controlar a disponibilidade do estoque e cadastrar, editar ou excluir peças; durante a edição, fotos existentes podem ser removidas individualmente.
+Catálogo responsivo de roupas com banner metálico da marca otimizado em WebP e animação de entrada discreta, respeitando a preferência por movimento reduzido, modos claro e escuro, busca, filtros por categoria, fotos, tamanhos e pedidos pelo WhatsApp. A preferência de tema fica salva no navegador. A barra superior minimalista contém o botão de troca de tema; a identidade visual aparece no banner. O painel administrativo separado, em `/admin`, permite controlar a disponibilidade do estoque e cadastrar, editar ou excluir peças; durante a edição, fotos existentes podem ser removidas individualmente.
 
 ## Atenção ao plano Vercel Hobby
 
