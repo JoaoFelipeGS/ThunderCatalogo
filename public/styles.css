@@ -99,6 +99,21 @@ button { color: inherit; }
 .cart-toggle > span:not(.cart-count) { font-size: 10px; font-weight: 700; }
 .cart-count { display: grid; min-width: 19px; height: 19px; place-items: center; padding: 0 5px; border-radius: 10px; background: var(--lime); color: var(--button-ink); font-size: 9px; font-weight: 700; }
 
+.install-toggle {
+  min-height: 36px;
+  padding: 0 14px;
+  border: 1px solid #52544d;
+  border-radius: 20px;
+  background: transparent;
+  color: var(--white);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.install-toggle:hover { background: var(--white); color: var(--deep); }
+.install-toggle[hidden] { display: none; }
+
 .theme-toggle {
   position: absolute;
   right: 7.1%;
@@ -135,7 +150,7 @@ button { color: inherit; }
   content: "";
   pointer-events: none;
   transform: translateX(-120%);
-  animation: banner-sheen 3s .65s ease-in-out infinite;
+  animation: banner-sheen 6s .65s ease-in-out infinite;
 }
 
 .site-banner img {
@@ -401,11 +416,11 @@ dialog::backdrop { background: rgba(11,12,10,.78); backdrop-filter: blur(3px); }
 
 .image-viewer-dialog { position: fixed; inset: 0; width: 100vw; height: 100dvh; max-width: none; max-height: none; margin: 0; padding: 54px 60px; overflow: hidden; border: 0; background: rgba(0,0,0,.96); color: white; }
 .image-viewer-dialog[open] { display: grid; place-items: center; }
-.viewer-image { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
+.viewer-image { display: block; max-width: calc(100vw - 120px); max-height: calc(100dvh - 140px); object-fit: contain; }
 .viewer-close { position: absolute; z-index: 3; top: 16px; right: 18px; display: grid; width: 42px; height: 42px; place-items: center; border: 1px solid rgba(255,255,255,.5); border-radius: 50%; background: rgba(0,0,0,.55); color: #fff; cursor: pointer; font-size: 28px; }
 .viewer-previous { left: 18px; }
 .viewer-next { right: 18px; }
-.viewer-count { position: absolute; bottom: 16px; left: 50%; color: #fff; font-size: 11px; transform: translateX(-50%); }
+.viewer-count { position: absolute; bottom: 16px; left: 50%; padding: 6px 10px; border-radius: 20px; background: rgba(0,0,0,.72); color: #fff; font-size: 11px; transform: translateX(-50%); }
 
 .admin-wrap { padding: 35px 38px 38px; }
 .admin-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 25px; padding-right: 35px; }
@@ -475,6 +490,7 @@ dialog::backdrop { background: rgba(11,12,10,.78); backdrop-filter: blur(3px); }
   .cart-toggle { left: 5%; min-width: 118px; height: 36px; gap: 7px; padding: 0 9px; }
   .cart-toggle svg { width: 17px; height: 17px; }
   .cart-toggle > span:not(.cart-count) { font-size: 9px; }
+  .install-toggle { min-height: 34px; padding: 0 10px; font-size: 9px; }
   .theme-toggle { right: 5%; width: 36px; height: 36px; }
   .section-shell { padding: 18px 6% 56px; }
   .section-heading { align-items: flex-start; flex-direction: column; gap: 6px; margin-bottom: 20px; }
@@ -511,6 +527,7 @@ dialog::backdrop { background: rgba(11,12,10,.78); backdrop-filter: blur(3px); }
   .cart-item { grid-template-columns: minmax(0,1fr); gap: 8px; }
   .cart-item-controls { justify-content: flex-start; }
   .image-viewer-dialog { padding: 52px 42px; }
+  .viewer-image { max-width: calc(100vw - 84px); max-height: calc(100dvh - 140px); }
   .viewer-previous { left: 8px; }
   .viewer-next { right: 8px; }
   .admin-wrap { padding: 28px 19px 24px; }

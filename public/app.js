@@ -8,6 +8,7 @@ const adminDialog = document.querySelector("#admin-dialog");
 const adminContent = document.querySelector("#admin-content");
 const toast = document.querySelector("#toast");
 const themeToggle = document.querySelector("#theme-toggle");
+const installToggle = document.querySelector("#install-toggle");
 const cartToggle = document.querySelector("#cart-toggle");
 const cartDialog = document.querySelector("#cart-dialog");
 const cartItemsContainer = document.querySelector("#cart-items");
@@ -30,6 +31,8 @@ let editingId = null;
 let adminProducts = [];
 let previewObjectUrls = [];
 let imageUploadsEnabled = true;
+let offlineCatalog = false;
+let installPrompt = null;
 
 const categoryLabels = {
   BERMUDA: "Bermuda",
@@ -216,6 +219,9 @@ async function api(url, options = {}) {
   } catch {
     throw new Error(`Não foi possível conectar à API (${url}). Verifique a conexão e tente novamente.`);
   }
+  if (url === "/api/products") {
+    offlineCatalog = response.headers.get("X-Offline-Cache") === "true" || !navigator.onLine;
+  }
   const responseText = await response.text();
   let result = {};
   try {
@@ -291,6 +297,7 @@ function renderProducts() {
   catalogStatus.textContent = products.length
     ? `${visibleProducts.length} ${visibleProducts.length === 1 ? "peça encontrada" : "peças encontradas"}`
     : "Nenhuma peça cadastrada ainda.";
+  if (offlineCatalog) catalogStatus.textContent += " · Catálogo salvo para acesso offline";
   emptyState.hidden = visibleProducts.length > 0;
   productGrid.innerHTML = visibleProducts.map((product, index) => {
     const sizes = (product.sizes || []).map(escapeHtml).join(" · ") || "Consulte os tamanhos";
@@ -818,15 +825,77 @@ themeToggle.addEventListener("click", () => {
     console.warn("Não foi possível salvar a preferência de tema.", error);
   }
 });
+window.addEventListener("beforeinstallprompt", (event) => {
+  event.preventDefault();
+  installPrompt = event;
+  installToggle.hidden = false;
+});
+installToggle.addEventListener("click", async () => {
+  if (!installPrompt) {
+    showToast("Para instalar, toque em Compartilhar e escolha Adicionar à Tela de Início.");
+    return;
+  }
+  try {
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    if (choice.outcome === "accepted") installToggle.hidden = true;
+  } catch (error) {
+    console.error("Não foi possível iniciar a instalação do catálogo.", error);
+    showToast("Não foi possível iniciar a instalação agora.", true);
+  } finally {
+    installPrompt = null;
+  }
+});
+window.addEventListener("appinstalled", () => {
+  installPrompt = null;
+  installToggle.hidden = true;
+});
+const isIosDevice = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+const isStandalone = window.matchMedia("(display-mode: standalone)").matches
+  || navigator.standalone === true;
+if (isIosDevice && !isStandalone) installToggle.hidden = false;
+function waitForServiceWorkerControl() {
+ if (navigator.serviceWorker.controller) return Promise.resolve();
+ return new Promise((resolve) => {
+   const timeout = window.setTimeout(() => {
+     navigator.serviceWorker.removeEventListener("controllerchange", onControllerChange);
+     resolve();
+   }, 3000);
+   function onControllerChange() {
+     window.clearTimeout(timeout);
+     resolve();
+   }
+   navigator.serviceWorker.addEventListener("controllerchange", onControllerChange, { once: true });
+   if (navigator.serviceWorker.controller) onControllerChange();
+ });
+}
+function waitForServiceWorkerActivation() {
+ return new Promise((resolve) => {
+   const timeout = window.setTimeout(() => resolve(null), 3000);
+   navigator.serviceWorker.ready.then((registration) => {
+     window.clearTimeout(timeout);
+     resolve(registration);
+   });
+ });
+}
+const serviceWorkerReady = "serviceWorker" in navigator && window.isSecureContext
+ ? navigator.serviceWorker.register("/sw.js")
+   .then(waitForServiceWorkerActivation)
+   .then((registration) => registration ? waitForServiceWorkerControl() : undefined)
+   .catch((error) => {
+     console.error("Não foi possível ativar o modo offline do catálogo.", error);
+   })
+ : Promise.resolve();
 document.querySelector("#current-year").textContent = String(new Date().getFullYear());
 renderCart();
 
-Promise.all([api("/api/config"), loadProducts()])
-  .then(([config]) => {
-    whatsappNumber = config.whatsappNumber;
-  })
-  .catch((error) => {
-    catalogStatus.textContent = error.message;
-    catalogStatus.classList.add("admin-error");
-    showToast("Não foi possível carregar o catálogo. Tente novamente.", true);
-  });
+serviceWorkerReady.then(() => Promise.all([api("/api/config"), loadProducts()]))
+ .then(([config]) => {
+   whatsappNumber = config.whatsappNumber;
+ })
+ .catch((error) => {
+   catalogStatus.textContent = error.message;
+   catalogStatus.classList.add("admin-error");
+   showToast("Não foi possível carregar o catálogo. Tente novamente.", true);
+ });
