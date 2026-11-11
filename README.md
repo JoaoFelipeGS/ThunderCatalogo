@@ -1,6 +1,7 @@
 # Thunder Sthormy — catálogo
 
 Catálogo responsivo de roupas com banner metálico da marca otimizado em WebP, zoom suave e reflexo animado contínuos, respeitando a preferência por movimento reduzido, modos claro e escuro (escuro por padrão), busca, filtros, fotos sem corte nos cards, galeria com setas discretas exibidas apenas no card em foco, visualização ampliada, tamanhos, carrinho persistente e pedidos pelo WhatsApp. O catálogo pode ser instalado como PWA e mantém a interface, os produtos públicos e imagens hospedadas no próprio site previamente carregados disponíveis offline; imagens externas, pedidos e alterações do estoque continuam dependendo de conexão. O botão “Carrinho” fica visível na barra superior, mostra a quantidade de itens e abre o carrinho automaticamente após adicionar uma peça. O cliente pode adicionar várias peças e quantidades ao carrinho e enviar o pedido completo pelo WhatsApp, ou comprar uma única peça diretamente. A preferência de tema fica salva no navegador, e a pessoa pode alternar pelo botão na barra superior minimalista. A identidade visual aparece no banner. O painel administrativo separado, em `/painel-estoque-7f3a9c`, permite controlar a disponibilidade do estoque e cadastrar, editar ou excluir peças; durante a edição, fotos existentes podem ser removidas individualmente.
+As páginas personalizadas `404.html` e `500.html` mantêm a identidade visual da marca; o servidor local exibe a página correspondente para erros HTML e mantém erros da API em JSON.
 
 ## Instalar no celular
 

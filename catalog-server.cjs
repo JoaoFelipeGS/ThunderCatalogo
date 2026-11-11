@@ -82,6 +82,26 @@ function sendJson(response, status, value, extraHeaders = {}) {
   response.end(JSON.stringify(value));
 }
 
+function acceptsHtml(request) {
+  return request.headers.accept?.includes("text/html") === true;
+}
+
+async function sendErrorPage(response, status, method) {
+  try {
+    const contents = await fs.readFile(path.join(publicRoot, `${status}.html`));
+    response.writeHead(status, {
+      "Cache-Control": "no-store",
+      "Content-Length": contents.length,
+      "Content-Type": "text/html; charset=utf-8",
+      "X-Content-Type-Options": "nosniff",
+    });
+    response.end(method === "HEAD" ? undefined : contents);
+  } catch (error) {
+    console.error(`Não foi possível carregar a página de erro ${status}.`, error);
+    sendJson(response, status, { error: status === 404 ? "Página não encontrada." : "Erro interno do servidor." });
+  }
+}
+
 function readJson(request, maxBytes) {
   return new Promise((resolve, reject) => {
     const chunks = [];
@@ -590,7 +610,8 @@ async function serveStatic(request, response, pathname) {
   try {
     const stats = await fs.stat(filePath);
     if (!stats.isFile()) {
-      sendJson(response, 404, { error: "Arquivo não encontrado." });
+      if (acceptsHtml(request)) await sendErrorPage(response, 404, request.method);
+      else sendJson(response, 404, { error: "Arquivo não encontrado." });
       return;
     }
     const contents = await fs.readFile(filePath);
@@ -604,7 +625,8 @@ async function serveStatic(request, response, pathname) {
     response.end(request.method === "HEAD" ? undefined : contents);
   } catch (error) {
     if (error.code === "ENOENT") {
-      sendJson(response, 404, { error: "Arquivo não encontrado." });
+      if (acceptsHtml(request)) await sendErrorPage(response, 404, request.method);
+      else sendJson(response, 404, { error: "Arquivo não encontrado." });
       return;
     }
     throw error;
@@ -635,7 +657,13 @@ async function handleRequest(request, response) {
       return;
     }
     const status = Number.isInteger(error.status) ? error.status : 500;
-    if (status === 500) console.error(error);
+    if (status === 500) {
+      console.error(error);
+      if (acceptsHtml(request) && !request.url.split("?")[0].startsWith("/api/")) {
+        await sendErrorPage(response, 500, request.method);
+        return;
+      }
+    }
     sendJson(response, status, { error: status === 500 ? "Erro interno do servidor." : error.message });
   }
 }

@@ -1,9 +1,11 @@
 const assert = require("node:assert/strict");
+const fs = require("node:fs/promises");
 const { spawn } = require("node:child_process");
 const http = require("node:http");
 const path = require("node:path");
 const { once } = require("node:events");
 const test = require("node:test");
+const { handleRequest } = require("../catalog-server.cjs");
 
 const root = path.join(__dirname, "..");
 const origin = "https://thunder-test.vercel.app";
@@ -499,5 +501,57 @@ test("a rota explícita permite editar produto com ID slug", async () => {
   } finally {
     if (catalog) await stopChild(catalog.child);
     await new Promise((resolve) => redisServer.close(resolve));
+  }
+});
+
+test("páginas de erro personalizadas mantêm o status e preservam erros da API em JSON", async () => {
+  const catalog = await startCatalog({});
+  try {
+    const notFound = await fetch(`${catalog.baseUrl}/rota-inexistente`, {
+      headers: { Accept: "text/html" },
+    });
+    assert.equal(notFound.status, 404);
+    assert.match(notFound.headers.get("content-type"), /text\/html/);
+    assert.match(await notFound.text(), /Página não encontrada/);
+
+    const serverErrorPage = await fetch(`${catalog.baseUrl}/500.html`);
+    assert.equal(serverErrorPage.status, 200);
+    assert.match(await serverErrorPage.text(), /Erro interno do servidor/);
+
+    const stylesheet = await fetch(`${catalog.baseUrl}/error-pages.css?v=1`);
+    assert.equal(stylesheet.status, 200);
+    assert.match(stylesheet.headers.get("content-type"), /text\/css/);
+
+    const apiNotFound = await fetch(`${catalog.baseUrl}/api/rota-inexistente`, {
+      headers: { Accept: "text/html" },
+    });
+    assert.equal(apiNotFound.status, 404);
+    assert.match(apiNotFound.headers.get("content-type"), /application\/json/);
+    assert.deepEqual(await apiNotFound.json(), { error: "Rota não encontrada." });
+  } finally {
+    await stopChild(catalog.child);
+  }
+});
+
+test("erros inesperados em páginas HTML exibem a página 500 com status correto", async () => {
+  const server = http.createServer(handleRequest);
+  const port = await listen(server);
+  const originalStat = fs.stat;
+  const originalConsoleError = console.error;
+  try {
+    fs.stat = async () => {
+      throw new Error("Falha de filesystem simulada para teste.");
+    };
+    console.error = () => {};
+    const response = await fetch(`http://127.0.0.1:${port}/pagina`, {
+      headers: { Accept: "text/html" },
+    });
+    assert.equal(response.status, 500);
+    assert.match(response.headers.get("content-type"), /text\/html/);
+    assert.match(await response.text(), /Erro interno do servidor/);
+  } finally {
+    fs.stat = originalStat;
+    console.error = originalConsoleError;
+    await new Promise((resolve) => server.close(resolve));
   }
 });
