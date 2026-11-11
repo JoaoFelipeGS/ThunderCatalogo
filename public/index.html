@@ -7,11 +7,16 @@
     <meta name="description" content="Conheça o catálogo Thunder Sthormy, escolha sua peça e faça seu pedido pelo WhatsApp.">
     <title>Thunder Sthormy — Catálogo</title>
     <link rel="icon" href="/assets/logo-thunder.jpg?v=2">
-    <link rel="stylesheet" href="/styles.css?v=13">
-    <script src="/app.js?v=5" defer></script>
+    <link rel="stylesheet" href="/styles.css?v=17">
+    <script src="/app.js?v=9" defer></script>
   </head>
   <body>
     <header class="site-header">
+      <button class="cart-toggle" id="cart-toggle" type="button" aria-label="Abrir carrinho, 0 itens" aria-controls="cart-dialog">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 4h2l2.2 11.1a2 2 0 0 0 2 1.6h8.5a2 2 0 0 0 1.9-1.4L21 9H6"></path><circle cx="10" cy="20" r="1"></circle><circle cx="18" cy="20" r="1"></circle></svg>
+        <span>Carrinho</span>
+        <span class="cart-count" id="cart-count">0</span>
+      </button>
       <button class="theme-toggle" id="theme-toggle" type="button" aria-label="Ativar modo claro" aria-pressed="true">
         <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.2 15.4A8.5 8.5 0 0 1 8.6 3.8 8.5 8.5 0 1 0 20.2 15.4Z"></path></svg>
         <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"></path></svg>
@@ -73,6 +78,26 @@
     <dialog class="product-dialog" id="product-dialog" aria-labelledby="detail-title">
       <button class="dialog-close" type="button" data-close-dialog aria-label="Fechar detalhes">×</button>
       <div id="product-detail"></div>
+    </dialog>
+
+    <dialog class="cart-dialog" id="cart-dialog" aria-labelledby="cart-title">
+      <button class="dialog-close" type="button" data-close-dialog aria-label="Fechar carrinho">×</button>
+      <div class="cart-wrap">
+        <p class="eyebrow eyebrow-dark"><span class="eyebrow-line"></span> Seu pedido</p>
+        <h2 id="cart-title">Carrinho</h2>
+        <div class="cart-items" id="cart-items"></div>
+        <p class="cart-total" id="cart-total"></p>
+        <p class="cart-hint" id="cart-hint" aria-live="polite"></p>
+        <button class="button button-lime cart-checkout" id="cart-checkout" type="button" disabled>Finalizar pelo WhatsApp <span aria-hidden="true">↗</span></button>
+      </div>
+    </dialog>
+
+    <dialog class="image-viewer-dialog" id="image-viewer-dialog" aria-label="Visualização ampliada da foto">
+      <button class="viewer-close" type="button" data-close-dialog aria-label="Fechar foto">×</button>
+      <button class="viewer-arrow viewer-previous" id="viewer-previous" type="button" aria-label="Foto anterior">‹</button>
+      <img class="viewer-image" id="viewer-image" alt="">
+      <button class="viewer-arrow viewer-next" id="viewer-next" type="button" aria-label="Próxima foto">›</button>
+      <span class="viewer-count" id="viewer-count" aria-live="polite"></span>
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

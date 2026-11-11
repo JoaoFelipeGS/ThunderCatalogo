@@ -8,10 +8,23 @@ const adminDialog = document.querySelector("#admin-dialog");
 const adminContent = document.querySelector("#admin-content");
 const toast = document.querySelector("#toast");
 const themeToggle = document.querySelector("#theme-toggle");
+const cartToggle = document.querySelector("#cart-toggle");
+const cartDialog = document.querySelector("#cart-dialog");
+const cartItemsContainer = document.querySelector("#cart-items");
+const cartCount = document.querySelector("#cart-count");
+const cartTotal = document.querySelector("#cart-total");
+const cartHint = document.querySelector("#cart-hint");
+const cartCheckout = document.querySelector("#cart-checkout");
+const imageViewerDialog = document.querySelector("#image-viewer-dialog");
+const viewerImage = document.querySelector("#viewer-image");
+const viewerCount = document.querySelector("#viewer-count");
 
 let products = [];
 let selectedCategory = "TODAS";
 let whatsappNumber = "";
+let cart = [];
+let viewerImages = [];
+let viewerImageIndex = 0;
 let toastTimer;
 let editingId = null;
 let adminProducts = [];
@@ -23,6 +36,140 @@ const categoryLabels = {
   OVERSIZED: "Oversized",
   PERUANA: "Peruana",
 };
+
+try {
+  const savedCart = JSON.parse(localStorage.getItem("thunder-catalog-cart") || "[]");
+  if (Array.isArray(savedCart)) {
+    cart = savedCart.filter((item) =>
+      item
+      && typeof item.productId === "string"
+      && typeof item.size === "string"
+      && Number.isInteger(item.quantity)
+      && item.quantity > 0
+      && item.quantity <= 99,
+    );
+  }
+} catch (error) {
+  console.warn("Não foi possível recuperar o carrinho salvo.", error);
+}
+
+function saveCart() {
+  try {
+    localStorage.setItem("thunder-catalog-cart", JSON.stringify(cart));
+  } catch (error) {
+    console.warn("Não foi possível salvar o carrinho.", error);
+    showToast("Não foi possível salvar o carrinho neste navegador.", true);
+  }
+}
+
+function renderCart() {
+  const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
+  cartCount.textContent = String(itemCount);
+  cartToggle.setAttribute("aria-label", `Abrir carrinho, ${itemCount} ${itemCount === 1 ? "item" : "itens"}`);
+
+  let canCheckout = cart.length > 0;
+  let totalKnown = cart.length > 0;
+  let total = 0;
+
+  cartItemsContainer.innerHTML = cart.length
+    ? cart.map((item, index) => {
+      const product = products.find((entry) => entry.id === item.productId);
+      if (!product || product.active === false) {
+        canCheckout = false;
+        totalKnown = false;
+        return `
+          <article class="cart-item cart-item-unavailable">
+            <div class="cart-item-info">
+              <strong>Peça indisponível</strong>
+              <span>${escapeHtml(item.productId)} · Tamanho ${escapeHtml(item.size || "a combinar")}</span>
+            </div>
+            <button class="cart-remove" type="button" data-cart-remove="${index}">Remover</button>
+          </article>`;
+      }
+
+      const hasPrice = product.price !== null && product.price !== undefined && Number.isFinite(Number(product.price));
+      if (hasPrice) total += Number(product.price) * item.quantity;
+      else totalKnown = false;
+
+      return `
+        <article class="cart-item">
+          <div class="cart-item-info">
+            <strong>${escapeHtml(product.title)} — ${escapeHtml(product.color)}</strong>
+            <span>Tamanho ${escapeHtml(item.size || "a combinar")}${hasPrice ? ` · ${formatPrice(Number(product.price) * item.quantity)}` : ""}</span>
+          </div>
+          <div class="cart-item-controls">
+            <button class="cart-quantity-button" type="button" data-cart-change="${index}" data-change="-1" aria-label="Diminuir quantidade" ${item.quantity <= 1 ? "disabled" : ""}>−</button>
+            <span class="cart-quantity">${item.quantity}</span>
+            <button class="cart-quantity-button" type="button" data-cart-change="${index}" data-change="1" aria-label="Aumentar quantidade" ${item.quantity >= 99 ? "disabled" : ""}>+</button>
+            <button class="cart-remove" type="button" data-cart-remove="${index}">Remover</button>
+          </div>
+        </article>`;
+    }).join("")
+    : '<p class="cart-empty">Seu carrinho está vazio. Escolha uma peça para começar.</p>';
+
+  cartTotal.textContent = totalKnown ? `Total: ${formatPrice(total)}` : "";
+  cartHint.textContent = canCheckout
+    ? (totalKnown ? "Disponibilidade e valor serão confirmados pela loja." : "Valores e disponibilidade serão confirmados pela loja no WhatsApp.")
+    : cart.length ? "Remova os itens indisponíveis para continuar." : "";
+  cartCheckout.disabled = !canCheckout;
+}
+
+function addToCart(product, size) {
+  if (!product || product.active === false) {
+    showToast("Esta peça está indisponível no momento.", true);
+    return;
+  }
+  const existingItem = cart.find((item) => item.productId === product.id && item.size === size);
+  if (existingItem) {
+    if (existingItem.quantity >= 99) {
+      showToast("O limite por peça no carrinho é 99 unidades.", true);
+      return;
+    }
+    existingItem.quantity += 1;
+  } else {
+    cart.push({ productId: product.id, size, quantity: 1 });
+  }
+  saveCart();
+  renderCart();
+  productDialog.close();
+  cartDialog.showModal();
+}
+
+function buildCartOrderMessage() {
+  const lines = cart.map((item, index) => {
+    const product = products.find((entry) => entry.id === item.productId);
+    const price = product.price !== null && product.price !== undefined && Number.isFinite(Number(product.price))
+      ? ` — ${formatPrice(Number(product.price) * item.quantity)}`
+      : "";
+    return `${index + 1}. ${item.quantity}x ${product.title} — ${product.color} | Tamanho: ${item.size || "a combinar"}${price}`;
+  });
+  const totalKnown = cart.every((item) => {
+    const product = products.find((entry) => entry.id === item.productId);
+    return product && product.price !== null && product.price !== undefined && Number.isFinite(Number(product.price));
+  });
+  const total = totalKnown
+    ? `\n\nTotal anunciado: ${formatPrice(cart.reduce((sum, item) => {
+      const product = products.find((entry) => entry.id === item.productId);
+      return sum + Number(product.price) * item.quantity;
+    }, 0))}`
+    : "";
+  return `Oi! Quero fazer um pedido da Thunder Sthormy:\n\n${lines.join("\n")}${total}\n\nPode confirmar a disponibilidade?`;
+}
+
+function showViewerImage(index) {
+  if (!viewerImages.length) return;
+  viewerImageIndex = (index + viewerImages.length) % viewerImages.length;
+  viewerImage.src = viewerImages[viewerImageIndex];
+  viewerCount.textContent = `${viewerImageIndex + 1} / ${viewerImages.length}`;
+  imageViewerDialog.querySelector("#viewer-previous").hidden = viewerImages.length < 2;
+  imageViewerDialog.querySelector("#viewer-next").hidden = viewerImages.length < 2;
+}
+
+function openImageViewer(images, index) {
+  viewerImages = images;
+  showViewerImage(index);
+  imageViewerDialog.showModal();
+}
 
 function applyTheme(theme) {
   const isDark = theme === "dark";
@@ -131,6 +278,13 @@ function renderCounts() {
   });
 }
 
+function activateProductCard(card) {
+  productGrid.querySelectorAll(".product-card.is-gallery-active").forEach((activeCard) => {
+    activeCard.classList.remove("is-gallery-active");
+  });
+  card.classList.add("is-gallery-active");
+}
+
 function renderProducts() {
   const visibleProducts = getVisibleProducts();
   renderCounts();
@@ -140,18 +294,26 @@ function renderProducts() {
   emptyState.hidden = visibleProducts.length > 0;
   productGrid.innerHTML = visibleProducts.map((product, index) => {
     const sizes = (product.sizes || []).map(escapeHtml).join(" · ") || "Consulte os tamanhos";
+    const images = Array.isArray(product.images) ? product.images : [];
     const firstImage = escapeHtml(product.images?.[0] || "");
+    const imageCount = images.length;
     const unavailable = product.active === false
       ? '<div class="product-unavailable">Indisponível</div>'
       : "";
     const price = product.price ? formatPrice(product.price) : "Consulte o valor";
     return `
-      <article class="product-card">
-        <button class="product-photo-wrap product-photo-button" type="button" data-product="${escapeHtml(product.id)}" aria-label="Ver detalhes de ${escapeHtml(product.title)}">
-          <img class="product-photo" src="${escapeHtml(getCatalogImageUrl(firstImage))}" alt="${escapeHtml(product.title)} — ${escapeHtml(product.color)}" loading="${index < 3 ? "eager" : "lazy"}" decoding="async" fetchpriority="${index === 0 ? "high" : "auto"}">
-          <span class="product-label">${escapeHtml(categoryLabels[product.category] || product.category)}</span>
+      <article class="product-card" data-product-id="${escapeHtml(product.id)}">
+        <div class="product-photo-wrap">
+          <button class="product-photo-button" type="button" data-product="${escapeHtml(product.id)}" aria-label="Ver detalhes de ${escapeHtml(product.title)}">
+            <img class="product-photo" data-card-image-index="0" src="${escapeHtml(getCatalogImageUrl(firstImage))}" alt="${escapeHtml(product.title)} — ${escapeHtml(product.color)}" loading="${index < 3 ? "eager" : "lazy"}" decoding="async" fetchpriority="${index === 0 ? "high" : "auto"}">
+            <span class="product-label">${escapeHtml(categoryLabels[product.category] || product.category)}</span>
+          </button>
+          ${imageCount > 1 ? `
+            <button class="product-gallery-arrow product-gallery-previous" type="button" data-card-gallery-step="-1" aria-label="Foto anterior de ${escapeHtml(product.title)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button>
+            <button class="product-gallery-arrow product-gallery-next" type="button" data-card-gallery-step="1" aria-label="Próxima foto de ${escapeHtml(product.title)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+            <span class="product-image-count" data-card-image-count>1 / ${imageCount}</span>` : ""}
           ${unavailable}
-        </button>
+        </div>
         <div class="product-info">
           <div class="product-overline"><span>${escapeHtml(product.color)}</span><span>${price}</span></div>
           <h3 class="product-title">${escapeHtml(product.title)}</h3>
@@ -166,21 +328,29 @@ function renderProducts() {
 }
 
 function buildOrderMessage(product, size) {
-  const price = product.price ? `\nValor anunciado: ${formatPrice(product.price)}` : "";
+  const price = product.price !== null && product.price !== undefined ? `\nValor anunciado: ${formatPrice(product.price)}` : "";
   return `Oi! Tenho interesse nesta peça da Thunder Sthormy:\n\n${product.title} — ${product.color}\nTamanho: ${size || "a combinar"}${price}\n\nPode me passar mais informações?`;
 }
 
 function openProduct(productId) {
   const product = products.find((entry) => entry.id === productId);
   if (!product) return;
-  const images = product.images || [];
+  const images = Array.isArray(product.images) ? product.images : [];
   const sizes = product.sizes || [];
   productDetail.innerHTML = `
     <div class="detail-layout">
       <div class="detail-gallery">
-        <img class="detail-main-image" id="detail-main-image" src="${escapeHtml(images[0] || "")}" alt="${escapeHtml(product.title)} — ${escapeHtml(product.color)}">
+        <div class="detail-image-stage">
+          <button class="detail-image-zoom" id="detail-image-zoom" type="button" aria-label="Ampliar foto de ${escapeHtml(product.title)}" ${images.length ? "" : "disabled"}>
+            <img class="detail-main-image" id="detail-main-image" src="${escapeHtml(images[0] || "")}" alt="${escapeHtml(product.title)} — ${escapeHtml(product.color)}">
+          </button>
+          ${images.length > 1 ? `
+            <button class="gallery-arrow gallery-previous" type="button" data-gallery-step="-1" aria-label="Foto anterior">‹</button>
+            <button class="gallery-arrow gallery-next" type="button" data-gallery-step="1" aria-label="Próxima foto">›</button>
+            <span class="detail-image-count" id="detail-image-count">1 / ${images.length}</span>` : ""}
+        </div>
         ${images.length > 1 ? `<div class="detail-thumbnails">${images.map((image, index) => `
-          <button class="detail-thumb ${index === 0 ? "is-active" : ""}" type="button" data-image="${escapeHtml(image)}" aria-label="Ver foto ${index + 1}">
+          <button class="detail-thumb ${index === 0 ? "is-active" : ""}" type="button" data-image-index="${index}" aria-label="Ver foto ${index + 1}">
             <img src="${escapeHtml(getCatalogImageUrl(image))}" alt="" loading="lazy" decoding="async">
           </button>`).join("")}</div>` : ""}
       </div>
@@ -189,39 +359,71 @@ function openProduct(productId) {
         <h2 id="detail-title">${escapeHtml(product.title)}</h2>
         <p class="detail-color">${escapeHtml(product.color)}</p>
         <p class="detail-description">${escapeHtml(product.description)}</p>
-        <p class="detail-price">${product.price ? formatPrice(product.price) : "Consulte o valor pelo WhatsApp"}</p>
+        <p class="detail-price">${product.price !== null && product.price !== undefined ? formatPrice(product.price) : "Consulte o valor pelo WhatsApp"}</p>
         <span class="detail-label">Escolha seu tamanho</span>
         <div class="detail-sizes" role="group" aria-label="Tamanhos disponíveis">
           ${sizes.length ? sizes.map((size) => `<button class="size-button" type="button" data-size="${escapeHtml(size)}">${escapeHtml(size)}</button>`).join("") : '<span class="detail-hint">Consulte disponibilidade pelo WhatsApp.</span>'}
         </div>
-        <button class="button button-lime detail-order" id="detail-order" type="button" disabled>Escolha um tamanho <span aria-hidden="true">↗</span></button>
-        <p class="detail-hint" id="detail-hint" aria-live="polite">A confirmação de estoque acontece pelo WhatsApp.</p>
+        <div class="detail-actions">
+          <button class="button button-outline" id="detail-add-cart" type="button" ${product.active === false || sizes.length ? "disabled" : ""}>Adicionar ao carrinho <span aria-hidden="true">+</span></button>
+          <button class="button button-lime" id="detail-buy-now" type="button" ${product.active === false || sizes.length ? "disabled" : ""}>Comprar agora <span aria-hidden="true">↗</span></button>
+        </div>
+        <p class="detail-hint" id="detail-hint" aria-live="polite">${product.active === false ? "Esta peça está indisponível." : sizes.length ? "Escolha um tamanho para continuar." : "A confirmação de estoque acontece pelo WhatsApp."}</p>
       </div>
     </div>`;
   productDialog.showModal();
-  const orderButton = productDetail.querySelector("#detail-order");
+  const addButton = productDetail.querySelector("#detail-add-cart");
+  const buyButton = productDetail.querySelector("#detail-buy-now");
   const hint = productDetail.querySelector("#detail-hint");
+  let selectedSize = "";
+
+  const selectImage = (index) => {
+    if (!images.length) return;
+    const selectedIndex = (index + images.length) % images.length;
+    const mainImage = productDetail.querySelector("#detail-main-image");
+    mainImage.src = images[selectedIndex];
+    mainImage.alt = `${product.title} — ${product.color}, foto ${selectedIndex + 1}`;
+    const imageCount = productDetail.querySelector("#detail-image-count");
+    if (imageCount) imageCount.textContent = `${selectedIndex + 1} / ${images.length}`;
+    productDetail.querySelectorAll(".detail-thumb").forEach((thumb) => {
+      thumb.classList.toggle("is-active", Number(thumb.dataset.imageIndex) === selectedIndex);
+    });
+    productDetail.querySelector("#detail-image-zoom").setAttribute("aria-label", `Ampliar foto ${selectedIndex + 1} de ${product.title}`);
+  };
+
+  productDetail.querySelector("#detail-image-zoom").addEventListener("click", () => {
+    if (images.length) {
+      const activeThumb = productDetail.querySelector(".detail-thumb.is-active");
+      openImageViewer(images, activeThumb ? Number(activeThumb.dataset.imageIndex) : 0);
+    }
+  });
+  productDetail.querySelectorAll("[data-gallery-step]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const activeThumb = productDetail.querySelector(".detail-thumb.is-active");
+      const currentIndex = activeThumb ? Number(activeThumb.dataset.imageIndex) : 0;
+      selectImage(currentIndex + Number(button.dataset.galleryStep));
+    });
+  });
+  productDetail.querySelectorAll(".detail-thumb").forEach((button) => {
+    button.addEventListener("click", () => selectImage(Number(button.dataset.imageIndex)));
+  });
+
   productDetail.querySelectorAll(".size-button").forEach((button) => {
     button.addEventListener("click", () => {
       productDetail.querySelectorAll(".size-button").forEach((sizeButton) => sizeButton.classList.remove("is-selected"));
       button.classList.add("is-selected");
-      orderButton.disabled = false;
-      orderButton.innerHTML = 'Pedir pelo WhatsApp <span aria-hidden="true">↗</span>';
-      orderButton.onclick = () => window.open(getWhatsAppUrl(buildOrderMessage(product, button.dataset.size)), "_blank", "noopener,noreferrer");
+      selectedSize = button.dataset.size;
+      addButton.disabled = product.active === false;
+      buyButton.disabled = product.active === false;
       hint.textContent = "Você confirma a disponibilidade ao conversar com a loja.";
     });
   });
-  if (!sizes.length) {
-    orderButton.disabled = false;
-    orderButton.innerHTML = 'Consultar pelo WhatsApp <span aria-hidden="true">↗</span>';
-    orderButton.onclick = () => window.open(getWhatsAppUrl(buildOrderMessage(product, "")), "_blank", "noopener,noreferrer");
-  }
-  productDetail.querySelectorAll(".detail-thumb").forEach((button) => {
-    button.addEventListener("click", () => {
-      productDetail.querySelector("#detail-main-image").src = button.dataset.image;
-      productDetail.querySelectorAll(".detail-thumb").forEach((thumb) => thumb.classList.remove("is-active"));
-      button.classList.add("is-active");
-    });
+
+  addButton.addEventListener("click", () => addToCart(product, selectedSize));
+  buyButton.addEventListener("click", () => {
+    if (product.active !== false) {
+      window.open(getWhatsAppUrl(buildOrderMessage(product, selectedSize)), "_blank", "noopener,noreferrer");
+    }
   });
 }
 
@@ -501,6 +703,7 @@ async function logout() {
 async function loadProducts() {
   products = await api("/api/products");
   renderProducts();
+  renderCart();
 }
 
 async function openAdmin() {
@@ -538,8 +741,70 @@ document.querySelectorAll("[data-category]").forEach((button) => {
 
 searchInput.addEventListener("input", renderProducts);
 productGrid.addEventListener("click", (event) => {
+  const galleryButton = event.target.closest("[data-card-gallery-step]");
+  if (galleryButton) {
+    const card = galleryButton.closest(".product-card");
+    activateProductCard(card);
+    const product = products.find((entry) => entry.id === card.dataset.productId);
+    const photo = card.querySelector(".product-photo");
+    if (product && product.images?.length > 1) {
+      const currentIndex = Number(photo.dataset.cardImageIndex || 0);
+      const nextIndex = (currentIndex + Number(galleryButton.dataset.cardGalleryStep) + product.images.length) % product.images.length;
+      photo.dataset.cardImageIndex = String(nextIndex);
+      photo.src = getCatalogImageUrl(product.images[nextIndex]);
+      photo.alt = `${product.title} — ${product.color}, foto ${nextIndex + 1}`;
+      card.querySelector("[data-card-image-count]").textContent = `${nextIndex + 1} / ${product.images.length}`;
+    }
+    return;
+  }
   const button = event.target.closest("[data-product]");
   if (button) openProduct(button.dataset.product);
+});
+productGrid.addEventListener("pointerover", (event) => {
+  const card = event.target.closest(".product-card");
+  if (card && !card.contains(event.relatedTarget)) activateProductCard(card);
+});
+productGrid.addEventListener("focusin", (event) => {
+  const card = event.target.closest(".product-card");
+  if (card) activateProductCard(card);
+});
+cartToggle.addEventListener("click", () => {
+  renderCart();
+  cartDialog.showModal();
+});
+cartItemsContainer.addEventListener("click", (event) => {
+  const removeButton = event.target.closest("[data-cart-remove]");
+  if (removeButton) {
+    cart.splice(Number(removeButton.dataset.cartRemove), 1);
+    saveCart();
+    renderCart();
+    return;
+  }
+  const quantityButton = event.target.closest("[data-cart-change]");
+  if (!quantityButton) return;
+  const item = cart[Number(quantityButton.dataset.cartChange)];
+  if (!item) return;
+  item.quantity = Math.max(1, Math.min(99, item.quantity + Number(quantityButton.dataset.change)));
+  saveCart();
+  renderCart();
+});
+cartCheckout.addEventListener("click", () => {
+  const allItemsAvailable = cart.length > 0 && cart.every((item) => {
+    const product = products.find((entry) => entry.id === item.productId);
+    return product && product.active !== false;
+  });
+  if (allItemsAvailable) window.open(getWhatsAppUrl(buildCartOrderMessage()), "_blank", "noopener,noreferrer");
+});
+document.querySelector("#viewer-previous").addEventListener("click", () => showViewerImage(viewerImageIndex - 1));
+document.querySelector("#viewer-next").addEventListener("click", () => showViewerImage(viewerImageIndex + 1));
+imageViewerDialog.addEventListener("keydown", (event) => {
+  if (event.key === "ArrowLeft" && viewerImages.length > 1) {
+    event.preventDefault();
+    showViewerImage(viewerImageIndex - 1);
+  } else if (event.key === "ArrowRight" && viewerImages.length > 1) {
+    event.preventDefault();
+    showViewerImage(viewerImageIndex + 1);
+  }
 });
 document.querySelectorAll("[data-close-dialog]").forEach((button) => {
   button.addEventListener("click", () => button.closest("dialog").close());
@@ -554,6 +819,7 @@ themeToggle.addEventListener("click", () => {
   }
 });
 document.querySelector("#current-year").textContent = String(new Date().getFullYear());
+renderCart();
 
 Promise.all([api("/api/config"), loadProducts()])
   .then(([config]) => {

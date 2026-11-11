@@ -22,6 +22,7 @@ const productsKey = "thunder-sthormy:products:v1";
 const loginWindowSeconds = 15 * 60;
 const maxImageBytes = 2 * 1024 * 1024;
 const maxImageRequestBytes = 3 * 1024 * 1024;
+const adminPanelPath = "/painel-estoque-7f3a9c";
 
 const categories = new Set(["OVERSIZED", "PERUANA", "BERMUDA"]);
 const mimeTypes = {
@@ -576,8 +577,8 @@ async function serveStatic(request, response, pathname) {
   }
   const relativePath = decodedPath === "/"
     ? "index.html"
-    : decodedPath === "/admin" || decodedPath === "/admin/"
-      ? path.join("admin", "index.html")
+    : decodedPath === adminPanelPath || decodedPath === `${adminPanelPath}/`
+      ? path.join("painel-estoque-7f3a9c", "index.html")
       : decodedPath.replace(/^\/+/, "");
   const filePath = path.resolve(publicRoot, relativePath);
   if (!filePath.startsWith(`${publicRoot}${path.sep}`)) {
