@@ -9,6 +9,14 @@ As páginas personalizadas `404.html` e `500.html` mantêm a identidade visual d
 - **iPhone/iPad:** abra o catálogo no Safari, toque em **Compartilhar** e escolha **Adicionar à Tela de Início**.
 - Abra o catálogo ao menos uma vez com internet para preparar o acesso offline. Produtos públicos carregados e imagens hospedadas no próprio site que já foram visitadas podem ficar disponíveis sem conexão; imagens externas, pedidos pelo WhatsApp e alterações do estoque precisam de internet.
 
+## SEO e indexação
+
+O catálogo público inclui canonical, metadados para compartilhamento, dados estruturados de organização/site, `robots.txt` e `sitemap.xml`. Depois de publicar no domínio definitivo:
+
+1. Confirme se o domínio canônico em `public/index.html`, `public/robots.txt` e `public/sitemap.xml` corresponde ao endereço público da loja; atualize os três se usar um domínio próprio.
+2. Verifique a propriedade do domínio no Google Search Console e envie `https://SEU-DOMINIO/sitemap.xml`.
+3. Use a inspeção de URL do Search Console para solicitar a indexação da página inicial. Indexação e posição dependem dos mecanismos de busca e não são garantidas pelo código.
+
 ## Atenção ao plano Vercel Hobby
 
 A documentação oficial da Vercel restringe o plano gratuito Hobby a uso pessoal e não comercial. Como este site divulga uma loja e recebe pedidos, confirme os termos antes de colocá-lo no ar: para uso comercial, escolha um plano permitido (como Pro) ou uma hospedagem gratuita que autorize expressamente esse uso. Não publique a loja comercial no Hobby contando com uma exceção.

@@ -1,4 +1,4 @@
-const CACHE_NAME = "thunder-sthormy-pwa-v3";
+const CACHE_NAME = "thunder-sthormy-pwa-v4";
 const IMAGE_CACHE = `${CACHE_NAME}-images`;
 const PRODUCT_CACHE = `${CACHE_NAME}-products`;
 const CONFIG_CACHE = `${CACHE_NAME}-config`;

@@ -507,6 +507,36 @@ test("a rota explícita permite editar produto com ID slug", async () => {
 test("páginas de erro personalizadas mantêm o status e preservam erros da API em JSON", async () => {
   const catalog = await startCatalog({});
   try {
+    const home = await fetch(`${catalog.baseUrl}/`, {
+      headers: { Accept: "text/html" },
+    });
+    assert.equal(home.status, 200);
+    const homeHtml = await home.text();
+    assert.match(homeHtml, /rel="canonical" href="https:\/\/thundercatalogo\.vercel\.app\/"/);
+    assert.match(homeHtml, /property="og:title"/);
+    assert.match(homeHtml, /name="twitter:card"/);
+    const structuredData = homeHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
+    assert.ok(structuredData);
+    assert.deepEqual(JSON.parse(structuredData[1])["@graph"].map((item) => item["@type"]), ["Organization", "WebSite"]);
+
+    const robots = await fetch(`${catalog.baseUrl}/robots.txt`);
+    assert.equal(robots.status, 200);
+    assert.match(robots.headers.get("content-type"), /text\/plain/);
+    const robotsText = await robots.text();
+    assert.match(robotsText, /Sitemap: https:\/\/thundercatalogo\.vercel\.app\/sitemap\.xml/);
+    assert.doesNotMatch(robotsText, /painel-estoque/);
+
+    const sitemap = await fetch(`${catalog.baseUrl}/sitemap.xml`);
+    assert.equal(sitemap.status, 200);
+    assert.match(sitemap.headers.get("content-type"), /application\/xml/);
+    const sitemapXml = await sitemap.text();
+    assert.match(sitemapXml, /<loc>https:\/\/thundercatalogo\.vercel\.app\/<\/loc>/);
+    assert.doesNotMatch(sitemapXml, /painel-estoque/);
+
+    const adminPage = await fetch(`${catalog.baseUrl}/painel-estoque-7f3a9c`);
+    assert.equal(adminPage.status, 200);
+    assert.match(await adminPage.text(), /name="robots" content="noindex, nofollow"/);
+
     const notFound = await fetch(`${catalog.baseUrl}/rota-inexistente`, {
       headers: { Accept: "text/html" },
     });
