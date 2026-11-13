@@ -516,14 +516,20 @@ test("páginas de erro personalizadas mantêm o status e preservam erros da API 
     assert.match(homeHtml, /rel="canonical" href="https:\/\/thundercatalogo\.vercel\.app\/"/);
     assert.match(homeHtml, /property="og:title"/);
     assert.match(homeHtml, /name="twitter:card"/);
-    const catalogStyles = await fetch(`${catalog.baseUrl}/styles.css?v=29`);
+    const catalogStyles = await fetch(`${catalog.baseUrl}/styles.css?v=32`);
     assert.equal(catalogStyles.status, 200);
     const catalogStylesText = await catalogStyles.text();
     assert.match(catalogStylesText, /\.category-grid\[hidden\], \.product-grid\[hidden\] \{ display: none; \}/);
     assert.match(catalogStylesText, /@keyframes category-card-pulse/);
     assert.match(catalogStylesText, /\.filter-box option \{ background-color: var\(--control\); color: var\(--ink\); \}/);
+    assert.match(catalogStylesText, /\.product-overline span:last-child \{ padding: 4px 7px; border-radius: 2px; background: #111111; color: #ffffff; white-space: nowrap; \}/);
     assert.match(homeHtml, /id="size-filter"/);
     assert.match(homeHtml, /id="color-filter"/);
+    assert.match(homeHtml, /class="instagram-banner"/);
+    assert.match(homeHtml, /https:\/\/www\.instagram\.com\/ThunderSthormy\//);
+    assert.match(homeHtml, /@ThunderSthormy/);
+    assert.match(homeHtml, /Acompanhe a loja/);
+    assert.doesNotMatch(homeHtml, /<p>Thunder Sthormy Clothes<\/p>/);
     for (const image of [
       "bermudas",
       "peruanas",

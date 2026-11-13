@@ -1,11 +1,11 @@
-const CACHE_NAME = "thunder-sthormy-pwa-v13";
+const CACHE_NAME = "thunder-sthormy-pwa-v16";
 const IMAGE_CACHE = `${CACHE_NAME}-images`;
 const PRODUCT_CACHE = `${CACHE_NAME}-products`;
 const CONFIG_CACHE = `${CACHE_NAME}-config`;
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
-  "/styles.css?v=29",
+  "/styles.css?v=32",
   "/error-pages.css?v=1",
   "/app.js?v=16",
   "/assets/banner-thunder-sthormy.webp",
