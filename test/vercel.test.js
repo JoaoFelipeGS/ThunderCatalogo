@@ -174,7 +174,7 @@ test("segurança, autenticação e persistência Vercel", async () => {
       body: JSON.stringify({
         title: "Peça de teste",
         description: "Peça criada durante o teste automatizado.",
-        category: "OVERSIZED",
+        category: "KIT",
         color: "Preto",
         sizes: ["M"],
         images: ["/assets/products/bermuda-boss-azul.webp"],
@@ -185,6 +185,7 @@ test("segurança, autenticação e persistência Vercel", async () => {
     assert.equal(saved.status, 201);
     assert.equal(records.has("thunder-sthormy:products:v1"), true);
     const savedProduct = await saved.json();
+    assert.equal(savedProduct.category, "KIT");
 
     const edited = await fetch(`${catalog.baseUrl}/api/products/${savedProduct.id}`, {
       method: "PUT",
@@ -515,6 +516,37 @@ test("páginas de erro personalizadas mantêm o status e preservam erros da API 
     assert.match(homeHtml, /rel="canonical" href="https:\/\/thundercatalogo\.vercel\.app\/"/);
     assert.match(homeHtml, /property="og:title"/);
     assert.match(homeHtml, /name="twitter:card"/);
+    const catalogStyles = await fetch(`${catalog.baseUrl}/styles.css?v=29`);
+    assert.equal(catalogStyles.status, 200);
+    const catalogStylesText = await catalogStyles.text();
+    assert.match(catalogStylesText, /\.category-grid\[hidden\], \.product-grid\[hidden\] \{ display: none; \}/);
+    assert.match(catalogStylesText, /@keyframes category-card-pulse/);
+    assert.match(catalogStylesText, /\.filter-box option \{ background-color: var\(--control\); color: var\(--ink\); \}/);
+    assert.match(homeHtml, /id="size-filter"/);
+    assert.match(homeHtml, /id="color-filter"/);
+    for (const image of [
+      "bermudas",
+      "peruanas",
+      "oversized",
+      "kits",
+    ]) {
+      assert.match(homeHtml, new RegExp(`/assets/categories/${image}\\.webp`));
+    }
+    for (const slug of [
+      "bermudas",
+      "peruanas",
+      "oversized",
+      "kits",
+    ]) {
+      assert.match(homeHtml, new RegExp(`<a class="category-card" href="/categoria/${slug}"`));
+    }
+    for (const slug of ["bermudas", "peruanas", "oversized", "kits"]) {
+      const categoryPage = await fetch(`${catalog.baseUrl}/categoria/${slug}`, {
+        headers: { Accept: "text/html" },
+      });
+      assert.equal(categoryPage.status, 200);
+      assert.match(await categoryPage.text(), /id="product-grid"/);
+    }
     const structuredData = homeHtml.match(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/);
     assert.ok(structuredData);
     assert.deepEqual(JSON.parse(structuredData[1])["@graph"].map((item) => item["@type"]), ["Organization", "WebSite"]);

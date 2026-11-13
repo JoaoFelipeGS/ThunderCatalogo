@@ -1,7 +1,13 @@
 const productGrid = document.querySelector("#product-grid");
+const categoryGrid = document.querySelector("#category-grid");
+const catalogControls = document.querySelector("#catalog-controls");
 const emptyState = document.querySelector("#empty-state");
 const catalogStatus = document.querySelector("#catalog-status");
+const collectionTitle = document.querySelector("#collection-title");
+const collectionDescription = document.querySelector("#collection-description");
 const searchInput = document.querySelector("#product-search");
+const sizeFilter = document.querySelector("#size-filter");
+const colorFilter = document.querySelector("#color-filter");
 const productDialog = document.querySelector("#product-dialog");
 const productDetail = document.querySelector("#product-detail");
 const adminDialog = document.querySelector("#admin-dialog");
@@ -21,7 +27,8 @@ const viewerImage = document.querySelector("#viewer-image");
 const viewerCount = document.querySelector("#viewer-count");
 
 let products = [];
-let selectedCategory = "TODAS";
+let selectedCategory = "";
+let catalogLoaded = false;
 let whatsappNumber = "";
 let cart = [];
 let viewerImages = [];
@@ -35,10 +42,23 @@ let offlineCatalog = false;
 let installPrompt = null;
 
 const categoryLabels = {
-  BERMUDA: "Bermuda",
+  BERMUDA: "Bermudas",
+  KIT: "Kits",
   OVERSIZED: "Oversized",
   PERUANA: "Peruana",
 };
+const categorySlugs = {
+  BERMUDA: "bermudas",
+  KIT: "kits",
+  OVERSIZED: "oversized",
+  PERUANA: "peruanas",
+};
+selectedCategory = getCategoryFromPath();
+
+function getCategoryFromPath() {
+  const match = window.location.pathname.match(/^\/categoria\/(bermudas|peruanas|oversized|kits)\/?$/);
+  return Object.entries(categorySlugs).find(([, slug]) => slug === match?.[1])?.[0] || "";
+}
 
 try {
   const savedCart = JSON.parse(localStorage.getItem("thunder-catalog-cart") || "[]");
@@ -261,27 +281,53 @@ function getCatalogImageUrl(image) {
 
 function getVisibleProducts() {
   const query = normalized(searchInput.value.trim());
+  const selectedSize = normalized(sizeFilter.value);
+  const selectedColor = normalized(colorFilter.value);
   return products.filter((product) => {
-    const categoryMatches = selectedCategory === "TODAS" || product.category === selectedCategory;
+    const categoryMatches = product.category === selectedCategory;
+    const sizes = Array.isArray(product.sizes) ? product.sizes : [];
+    const sizeMatches = !selectedSize || sizes.some((size) => normalized(size) === selectedSize);
+    const colorMatches = !selectedColor || normalized(product.color) === selectedColor;
     const searchableText = normalized([
       product.title,
       product.color,
       product.description,
       categoryLabels[product.category],
-      ...(product.sizes || []),
+      ...sizes,
     ].join(" "));
-    return categoryMatches && (!query || searchableText.includes(query));
+    return categoryMatches && sizeMatches && colorMatches && (!query || searchableText.includes(query));
   });
 }
 
-function renderCounts() {
-  document.querySelectorAll("[data-count]").forEach((counter) => {
-    const category = counter.dataset.count;
-    const count = category === "TODAS"
-      ? products.length
-      : products.filter((product) => product.category === category).length;
-    counter.textContent = count ? `(${count})` : "";
+function updateFilterOptions() {
+  const selectedSize = sizeFilter.value;
+  const selectedColor = colorFilter.value;
+  const categoryProducts = products.filter((product) => product.category === selectedCategory);
+  const sizes = [...new Set(categoryProducts.flatMap((product) => (
+    Array.isArray(product.sizes) ? product.sizes : []
+  )))].sort((first, second) => first.localeCompare(second, "pt-BR", { numeric: true }));
+  const colorsByNormalizedValue = new Map();
+  categoryProducts.forEach((product) => {
+    const color = String(product.color || "").trim();
+    const normalizedColor = normalized(color);
+    if (normalizedColor && !colorsByNormalizedValue.has(normalizedColor)) {
+      colorsByNormalizedValue.set(normalizedColor, color);
+    }
   });
+  const colors = [...colorsByNormalizedValue.values()]
+    .sort((first, second) => first.localeCompare(second, "pt-BR"));
+
+  sizeFilter.innerHTML = `<option value="">Todos</option>${sizes.map((size) => (
+    `<option value="${escapeHtml(size)}">${escapeHtml(size)}</option>`
+  )).join("")}`;
+  colorFilter.innerHTML = `<option value="">Todas</option>${colors.map((color) => (
+    `<option value="${escapeHtml(color)}">${escapeHtml(color)}</option>`
+  )).join("")}`;
+  sizeFilter.value = sizes.includes(selectedSize) ? selectedSize : "";
+  const matchingColor = colors.find((color) => normalized(color) === normalized(selectedColor));
+  colorFilter.value = matchingColor || "";
+  sizeFilter.disabled = sizes.length === 0;
+  colorFilter.disabled = colors.length === 0;
 }
 
 function activateProductCard(card) {
@@ -292,13 +338,51 @@ function activateProductCard(card) {
 }
 
 function renderProducts() {
+  const isViewingCategory = Boolean(selectedCategory);
+  document.body.classList.toggle("is-category-page", isViewingCategory);
+  if (isViewingCategory) categoryGrid.classList.remove("is-entering");
+  categoryGrid.hidden = isViewingCategory;
+  catalogControls.hidden = !isViewingCategory;
+  catalogStatus.hidden = !isViewingCategory;
+  collectionTitle.textContent = isViewingCategory ? categoryLabels[selectedCategory] : "Escolha uma categoria";
+  collectionDescription.textContent = isViewingCategory
+    ? `Peças da categoria ${categoryLabels[selectedCategory]}.`
+    : "Toque em uma categoria para ver as peças disponíveis.";
+  document.title = isViewingCategory
+    ? `${categoryLabels[selectedCategory]} | Thunder Sthormy`
+    : "Thunder Sthormy — Catálogo";
+  const canonicalUrl = isViewingCategory
+    ? `https://thundercatalogo.vercel.app/categoria/${categorySlugs[selectedCategory]}`
+    : "https://thundercatalogo.vercel.app/";
+  document.querySelector('link[rel="canonical"]').href = canonicalUrl;
+  document.querySelector('meta[property="og:url"]').content = canonicalUrl;
+  document.querySelector('meta[property="og:title"]').content = isViewingCategory
+    ? `${categoryLabels[selectedCategory]} | Thunder Sthormy`
+    : "Thunder Sthormy | Moda masculina com atitude";
+  document.querySelector('meta[property="og:description"]').content = isViewingCategory
+    ? `Confira as peças da categoria ${categoryLabels[selectedCategory]} no catálogo Thunder Sthormy e peça pelo WhatsApp.`
+    : "Camisetas oversized e peruanas, bermudas e kits. Escolha sua peça no catálogo Thunder Sthormy e peça pelo WhatsApp.";
+  updateFilterOptions();
   const visibleProducts = getVisibleProducts();
-  renderCounts();
-  catalogStatus.textContent = products.length
-    ? `${visibleProducts.length} ${visibleProducts.length === 1 ? "peça encontrada" : "peças encontradas"}`
+  const categoryProductCount = products.filter((product) => product.category === selectedCategory).length;
+  catalogStatus.textContent = !catalogLoaded
+    ? "Carregando peças..."
+    : products.length
+    ? `${visibleProducts.length} ${visibleProducts.length === 1 ? "peça encontrada" : "peças encontradas"} nesta categoria`
     : "Nenhuma peça cadastrada ainda.";
   if (offlineCatalog) catalogStatus.textContent += " · Catálogo salvo para acesso offline";
-  emptyState.hidden = visibleProducts.length > 0;
+  emptyState.hidden = !isViewingCategory || !catalogLoaded || visibleProducts.length > 0;
+  productGrid.hidden = !isViewingCategory || !catalogLoaded || visibleProducts.length === 0;
+  if (catalogLoaded && !visibleProducts.length && categoryProductCount === 0 && selectedCategory === "KIT") {
+    emptyState.querySelector("h3").textContent = "Kits em breve";
+    emptyState.querySelector("p").textContent = "Estamos preparando os kits. Volte em breve para conferir.";
+  } else if (catalogLoaded && !visibleProducts.length && categoryProductCount > 0) {
+    emptyState.querySelector("h3").textContent = "Nenhuma peça encontrada.";
+    emptyState.querySelector("p").textContent = "Ajuste os filtros de tamanho, cor ou busca para ver outras peças.";
+  } else {
+    emptyState.querySelector("h3").textContent = "Nenhuma peça por aqui.";
+    emptyState.querySelector("p").textContent = "Tente outro termo ou volte às categorias.";
+  }
   productGrid.innerHTML = visibleProducts.map((product, index) => {
     const sizes = (product.sizes || []).map(escapeHtml).join(" · ") || "Consulte os tamanhos";
     const images = Array.isArray(product.images) ? product.images : [];
@@ -709,6 +793,7 @@ async function logout() {
 
 async function loadProducts() {
   products = await api("/api/products");
+  catalogLoaded = true;
   renderProducts();
   renderCart();
 }
@@ -738,15 +823,9 @@ async function openAdmin() {
   }
 }
 
-document.querySelectorAll("[data-category]").forEach((button) => {
-  button.addEventListener("click", () => {
-    selectedCategory = button.dataset.category;
-    document.querySelectorAll(".filter-chip").forEach((chip) => chip.classList.toggle("is-selected", chip === button));
-    renderProducts();
-  });
-});
-
 searchInput.addEventListener("input", renderProducts);
+sizeFilter.addEventListener("change", renderProducts);
+colorFilter.addEventListener("change", renderProducts);
 productGrid.addEventListener("click", (event) => {
   const galleryButton = event.target.closest("[data-card-gallery-step]");
   if (galleryButton) {
@@ -888,6 +967,7 @@ const serviceWorkerReady = "serviceWorker" in navigator && window.isSecureContex
    })
  : Promise.resolve();
 document.querySelector("#current-year").textContent = String(new Date().getFullYear());
+renderProducts();
 renderCart();
 
 serviceWorkerReady.then(() => Promise.all([api("/api/config"), loadProducts()]))

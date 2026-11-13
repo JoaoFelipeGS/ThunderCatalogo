@@ -24,7 +24,7 @@ const maxImageBytes = 2 * 1024 * 1024;
 const maxImageRequestBytes = 3 * 1024 * 1024;
 const adminPanelPath = "/painel-estoque-7f3a9c";
 
-const categories = new Set(["OVERSIZED", "PERUANA", "BERMUDA"]);
+const categories = new Set(["OVERSIZED", "PERUANA", "BERMUDA", "KIT"]);
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -598,7 +598,8 @@ async function serveStatic(request, response, pathname) {
     sendJson(response, 400, { error: "Endereço inválido." });
     return;
   }
-  const relativePath = decodedPath === "/"
+  const categoryPage = /^\/categoria\/(bermudas|peruanas|oversized|kits)\/?$/.test(decodedPath);
+  const relativePath = decodedPath === "/" || categoryPage
     ? "index.html"
     : decodedPath === adminPanelPath || decodedPath === `${adminPanelPath}/`
       ? path.join("painel-estoque-7f3a9c", "index.html")

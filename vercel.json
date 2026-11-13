@@ -1,5 +1,11 @@
 {
   "framework": null,
+  "rewrites": [
+    { "source": "/categoria/bermudas", "destination": "/" },
+    { "source": "/categoria/peruanas", "destination": "/" },
+    { "source": "/categoria/oversized", "destination": "/" },
+    { "source": "/categoria/kits", "destination": "/" }
+  ],
   "headers": [
     {
       "source": "/(.*)",

@@ -4,14 +4,14 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#000000">
-    <meta name="description" content="Conheça o catálogo Thunder Sthormy de moda masculina: camisetas oversized e peruanas, bermudas e pedidos diretos pelo WhatsApp.">
+    <meta name="description" content="Conheça as categorias Thunder Sthormy: camisetas oversized e peruanas, bermudas e kits. Escolha sua peça e peça pelo WhatsApp.">
     <meta name="robots" content="index, follow, max-image-preview:large">
     <link rel="canonical" href="https://thundercatalogo.vercel.app/">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="pt_BR">
     <meta property="og:site_name" content="Thunder Sthormy">
     <meta property="og:title" content="Thunder Sthormy | Moda masculina com atitude">
-    <meta property="og:description" content="Camisetas oversized e peruanas, bermudas e pedidos pelo WhatsApp. Conheça o catálogo Thunder Sthormy.">
+    <meta property="og:description" content="Camisetas oversized e peruanas, bermudas e kits. Escolha sua peça no catálogo Thunder Sthormy e peça pelo WhatsApp.">
     <meta property="og:url" content="https://thundercatalogo.vercel.app/">
     <meta property="og:image" content="https://thundercatalogo.vercel.app/assets/banner-thunder-sthormy.webp">
     <meta property="og:image:alt" content="Banner da marca Thunder Sthormy Clothes">
@@ -19,7 +19,7 @@
     <meta property="og:image:height" content="768">
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="Thunder Sthormy | Moda masculina com atitude">
-    <meta name="twitter:description" content="Camisetas oversized e peruanas, bermudas e pedidos pelo WhatsApp. Conheça o catálogo Thunder Sthormy.">
+    <meta name="twitter:description" content="Camisetas oversized e peruanas, bermudas e kits. Escolha sua peça no catálogo Thunder Sthormy e peça pelo WhatsApp.">
     <meta name="twitter:image" content="https://thundercatalogo.vercel.app/assets/banner-thunder-sthormy.webp">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="Thunder Sthormy">
@@ -28,8 +28,8 @@
     <link rel="icon" href="/icons/icon-192.png" type="image/png">
     <link rel="apple-touch-icon" href="/icons/icon-192.png">
     <link rel="sitemap" type="application/xml" href="/sitemap.xml">
-    <link rel="stylesheet" href="/styles.css?v=19">
-    <script src="/app.js?v=11" defer></script>
+    <link rel="stylesheet" href="/styles.css?v=29">
+    <script src="/app.js?v=16" defer></script>
     <script type="application/ld+json">
       {
         "@context": "https://schema.org",
@@ -85,27 +85,51 @@
       <section class="collection section-shell" id="colecao" aria-labelledby="collection-title">
         <div class="section-heading">
           <div>
-            <h1 id="collection-title">Catálogo de moda masculina</h1>
+            <h1 id="collection-title">Escolha uma categoria</h1>
           </div>
-          <p class="section-description">Camisetas oversized e peruanas, bermudas e pedidos pelo WhatsApp.</p>
+          <p class="section-description" id="collection-description">Toque em uma categoria para ver as peças disponíveis.</p>
         </div>
 
-        <div class="catalog-controls">
-          <div class="category-tabs" role="group" aria-label="Filtrar por categoria">
-            <button class="filter-chip is-selected" type="button" data-category="TODAS">Todas <span data-count="TODAS"></span></button>
-            <button class="filter-chip" type="button" data-category="OVERSIZED">Oversized <span data-count="OVERSIZED"></span></button>
-            <button class="filter-chip" type="button" data-category="PERUANA">Peruana <span data-count="PERUANA"></span></button>
-            <button class="filter-chip" type="button" data-category="BERMUDA">Bermudas <span data-count="BERMUDA"></span></button>
-          </div>
-          <label class="search-box">
-            <span class="sr-only">Buscar peça</span>
-            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg>
-            <input id="product-search" type="search" placeholder="Buscar peça..." autocomplete="off">
-          </label>
+        <div class="category-grid is-entering" id="category-grid" role="group" aria-label="Categorias de produtos">
+          <a class="category-card" href="/categoria/bermudas" aria-label="Ver categoria Bermudas">
+            <img src="/assets/categories/bermudas.webp" alt="Categoria Bermudas" width="1200" height="1200" fetchpriority="high">
+          </a>
+          <a class="category-card" href="/categoria/peruanas" aria-label="Ver categoria Peruanas">
+            <img src="/assets/categories/peruanas.webp" alt="Categoria Camisetas Peruanas" width="1177" height="1200" loading="lazy">
+          </a>
+          <a class="category-card" href="/categoria/oversized" aria-label="Ver categoria Oversizeds">
+            <img src="/assets/categories/oversized.webp" alt="Categoria Camisetas Oversizeds" width="1200" height="1200" loading="lazy">
+          </a>
+          <a class="category-card" href="/categoria/kits" aria-label="Ver categoria Kits">
+            <img src="/assets/categories/kits.webp" alt="Categoria Kits" width="1200" height="1200" loading="lazy">
+          </a>
         </div>
 
-        <div class="catalog-status" id="catalog-status" role="status" aria-live="polite"></div>
-        <div class="product-grid" id="product-grid"></div>
+        <div class="catalog-controls" id="catalog-controls" hidden>
+          <a class="category-back" id="category-back" href="/">← Todas as categorias</a>
+          <div class="catalog-filter-row">
+            <label class="search-box">
+              <span class="sr-only">Buscar peça</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"></circle><path d="m16 16 4.5 4.5"></path></svg>
+              <input id="product-search" type="search" placeholder="Buscar peça..." autocomplete="off">
+            </label>
+            <label class="filter-box">
+              <span>Tamanho</span>
+              <select id="size-filter" aria-label="Filtrar por tamanho">
+                <option value="">Todos</option>
+              </select>
+            </label>
+            <label class="filter-box">
+              <span>Cor</span>
+              <select id="color-filter" aria-label="Filtrar por cor">
+                <option value="">Todas</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="catalog-status" id="catalog-status" role="status" aria-live="polite" hidden></div>
+        <div class="product-grid" id="product-grid" hidden></div>
         <div class="empty-state" id="empty-state" hidden>
           <span class="empty-icon" aria-hidden="true">⌕</span>
           <h3>Nenhuma peça por aqui.</h3>
