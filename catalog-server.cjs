@@ -8,6 +8,8 @@ const publicRoot = path.join(__dirname, "public");
 const uploadsRoot = path.join(publicRoot, "uploads");
 const dataRoot = path.join(__dirname, "data");
 const productsFile = path.join(dataRoot, "products.json");
+const salesFile = path.join(dataRoot, "sales.json");
+const categoriesFile = path.join(dataRoot, "categories.json");
 const seedProducts = require("./data/products.json");
 const isVercelDeployment = process.env.VERCEL === "1";
 const port = Number(process.env.PORT || 3000);
@@ -19,12 +21,19 @@ const sessions = new Map();
 const loginAttempts = new Map();
 let writeQueue = Promise.resolve();
 const productsKey = "thunder-sthormy:products:v1";
+const salesKey = "thunder-sthormy:sales:v1";
+const categoriesKey = "thunder-sthormy:categories:v1";
 const loginWindowSeconds = 15 * 60;
 const maxImageBytes = 2 * 1024 * 1024;
 const maxImageRequestBytes = 3 * 1024 * 1024;
 const adminPanelPath = "/painel-estoque-7f3a9c";
 
-const categories = new Set(["OVERSIZED", "PERUANA", "BERMUDA", "KIT"]);
+const defaultCategories = [
+  { id: "BERMUDA", name: "Bermudas", slug: "bermudas", image: "/assets/categories/bermudas.webp", cost: null },
+  { id: "PERUANA", name: "Peruanas", slug: "peruanas", image: "/assets/categories/peruanas.webp", cost: null },
+  { id: "OVERSIZED", name: "Oversized", slug: "oversized", image: "/assets/categories/oversized.webp", cost: null },
+  { id: "KIT", name: "Kits", slug: "kits", image: "/assets/categories/kits.webp", cost: null },
+];
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
@@ -174,14 +183,53 @@ function cleanText(value, maxLength) {
   return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
 }
 
-function normalizeProduct(payload) {
+function normalizeOptionalCost(value) {
+  if (value === "" || value === null || value === undefined) return null;
+  const cost = Number(value);
+  if (!Number.isFinite(cost)
+    || cost < 0
+    || cost > 10000000
+    || Math.abs(cost * 100 - Math.round(cost * 100)) >= 0.000001) {
+    throw Object.assign(new Error("Informe um custo válido, com até duas casas decimais, ou deixe o campo vazio."), { status: 400 });
+  }
+  return Math.round(cost * 100) / 100;
+}
+
+function slugifyCategoryName(value) {
+  return value.normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 40);
+}
+
+function normalizeCategory(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw Object.assign(new Error("Dados do tipo de peça inválidos."), { status: 400 });
+  }
+  const name = cleanText(payload.name, 50);
+  const slug = slugifyCategoryName(name);
+  if (name.length < 2 || !slug) {
+    throw Object.assign(new Error("Informe um nome válido para o tipo de peça."), { status: 400 });
+  }
+  return {
+    id: slug.toUpperCase().replace(/-/g, "_"),
+    name,
+    slug,
+    image: null,
+    cost: normalizeOptionalCost(payload.cost),
+  };
+}
+
+function normalizeProduct(payload, availableCategories) {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw Object.assign(new Error("Dados do produto inválidos."), { status: 400 });
   }
 
   const title = cleanText(payload.title, 80);
   const description = cleanText(payload.description, 1000);
-  const category = cleanText(payload.category, 30).toUpperCase();
+  const category = cleanText(payload.category, 50).toUpperCase();
   const color = cleanText(payload.color, 50);
   const sizes = Array.isArray(payload.sizes)
     ? [...new Set(payload.sizes.map((size) => cleanText(size, 20)).filter(Boolean))].slice(0, 12)
@@ -195,13 +243,14 @@ function normalizeProduct(payload) {
 
   if (title.length < 2) throw Object.assign(new Error("Informe o nome da peça."), { status: 400 });
   if (!description) throw Object.assign(new Error("Informe a descrição da peça."), { status: 400 });
-  if (!categories.has(category)) throw Object.assign(new Error("Escolha uma categoria válida."), { status: 400 });
+  if (!availableCategories.some((entry) => entry.id === category)) {
+    throw Object.assign(new Error("Escolha um tipo de peça válido."), { status: 400 });
+  }
   if (!color) throw Object.assign(new Error("Informe a cor da peça."), { status: 400 });
   if (!images.length) throw Object.assign(new Error("Adicione pelo menos uma foto válida."), { status: 400 });
   if (price !== null && (!Number.isFinite(price) || price <= 0 || price > 10000000)) {
     throw Object.assign(new Error("Informe um preço válido ou deixe o campo vazio."), { status: 400 });
   }
-
   return {
     title,
     description,
@@ -307,6 +356,54 @@ async function redisCommand(...command) {
   return result.result;
 }
 
+function normalizeSale(payload, products, availableCategories) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw Object.assign(new Error("Dados da venda inválidos."), { status: 400 });
+  }
+
+  const productId = cleanText(payload.productId, 100);
+  const product = products.find((entry) => entry.id === productId);
+  if (!product) throw Object.assign(new Error("Escolha uma peça válida para registrar a venda."), { status: 400 });
+
+  const category = availableCategories.find((entry) => entry.id === product.category);
+  const quantity = Number(payload.quantity);
+  const unitPrice = Number(payload.unitPrice);
+  const unitCost = category?.cost === null || category?.cost === undefined ? NaN : Number(category.cost);
+  const isValidMoney = (value, allowZero = false) => Number.isFinite(value)
+    && value <= 10000000
+    && (allowZero ? value >= 0 : value > 0)
+    && Math.abs(value * 100 - Math.round(value * 100)) < 0.000001;
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 999) {
+    throw Object.assign(new Error("Informe uma quantidade entre 1 e 999."), { status: 400 });
+  }
+  if (!isValidMoney(unitCost, true)) {
+    throw Object.assign(new Error("Cadastre o custo deste tipo de peça antes de registrar a venda."), { status: 400 });
+  }
+  if (!isValidMoney(unitPrice)) {
+    throw Object.assign(new Error("Informe o preço de venda com até duas casas decimais."), { status: 400 });
+  }
+
+  const size = cleanText(payload.size, 20);
+  const productSizes = Array.isArray(product.sizes) ? product.sizes : [];
+  if ((productSizes.length > 0 && !size) || (size && !productSizes.includes(size))) {
+    throw Object.assign(new Error("Escolha um tamanho disponível para esta peça."), { status: 400 });
+  }
+
+  return {
+    id: crypto.randomUUID(),
+    productId,
+    productTitle: product.title,
+    categoryId: product.category,
+    categoryName: category.name,
+    color: product.color,
+    size,
+    quantity,
+    unitPriceCents: Math.round(unitPrice * 100),
+    unitCostCents: Math.round(unitCost * 100),
+    soldAt: new Date().toISOString(),
+  };
+}
+
 async function loadProducts() {
   if (isVercelDeployment) {
     if (!hasRedisConfig()) return seedProducts;
@@ -328,12 +425,79 @@ async function loadProducts() {
   return products;
 }
 
+async function loadCategories() {
+  if (isVercelDeployment) {
+    if (!hasRedisConfig()) return defaultCategories;
+    const storedCategories = await redisCommand("GET", categoriesKey);
+    if (storedCategories !== null) {
+      const categories = JSON.parse(storedCategories);
+      if (!Array.isArray(categories)) throw new Error("Os tipos de peça precisam ser uma lista.");
+      return categories;
+    }
+    await redisCommand("SET", categoriesKey, JSON.stringify(defaultCategories), "NX");
+    const initializedCategories = await redisCommand("GET", categoriesKey);
+    const categories = JSON.parse(initializedCategories || JSON.stringify(defaultCategories));
+    if (!Array.isArray(categories)) throw new Error("Os tipos de peça precisam ser uma lista.");
+    return categories;
+  }
+  try {
+    const contents = await fs.readFile(categoriesFile, "utf8");
+    const categories = JSON.parse(contents);
+    if (!Array.isArray(categories)) throw new Error("Os tipos de peça precisam ser uma lista.");
+    return categories;
+  } catch (error) {
+    if (error.code === "ENOENT") return defaultCategories;
+    throw error;
+  }
+}
+
+async function loadSales() {
+  if (isVercelDeployment) {
+    const storedSales = await redisCommand("LRANGE", salesKey, "0", "-1");
+    if (!Array.isArray(storedSales)) throw new Error("O histórico de vendas precisa ser uma lista.");
+    return storedSales.map((sale) => JSON.parse(sale));
+  }
+  try {
+    const contents = await fs.readFile(salesFile, "utf8");
+    const sales = JSON.parse(contents);
+    if (!Array.isArray(sales)) throw new Error("O histórico de vendas precisa ser uma lista.");
+    return sales;
+  } catch (error) {
+    if (error.code === "ENOENT") return [];
+    throw error;
+  }
+}
+
+function saveSale(sale) {
+  if (isVercelDeployment) {
+    return redisCommand("RPUSH", salesKey, JSON.stringify(sale));
+  }
+  writeQueue = writeQueue.then(async () => {
+    const sales = await loadSales();
+    sales.push(sale);
+    const temporaryFile = `${salesFile}.tmp`;
+    await fs.writeFile(temporaryFile, `${JSON.stringify(sales, null, 2)}\n`, "utf8");
+    await fs.rename(temporaryFile, salesFile);
+  });
+  return writeQueue;
+}
+
 function saveProducts(products) {
   if (isVercelDeployment) return redisCommand("SET", productsKey, JSON.stringify(products));
   writeQueue = writeQueue.then(async () => {
     const temporaryFile = `${productsFile}.tmp`;
     await fs.writeFile(temporaryFile, `${JSON.stringify(products, null, 2)}\n`, "utf8");
     await fs.rename(temporaryFile, productsFile);
+  });
+  return writeQueue;
+}
+
+function saveCategories(categories) {
+  if (isVercelDeployment) return redisCommand("SET", categoriesKey, JSON.stringify(categories));
+  writeQueue = writeQueue.then(async () => {
+    const temporaryFile = `${categoriesFile}.tmp`;
+    await fs.writeFile(temporaryFile, `${JSON.stringify(categories, null, 2)}\n`, "utf8");
+    await fs.rename(temporaryFile, categoriesFile);
   });
   return writeQueue;
 }
@@ -472,6 +636,72 @@ async function handleApi(request, response, url) {
     return true;
   }
 
+  if (url.pathname === "/api/admin/categories" && request.method === "GET") {
+    if (!await requireAdmin(request, response)) return true;
+    sendJson(response, 200, await loadCategories());
+    return true;
+  }
+
+  const categoryRoute = url.pathname.match(/^\/api\/categories(?:\/([A-Z0-9_-]{1,50}))?$/i);
+  if (categoryRoute) {
+    const categoryId = categoryRoute[1]?.toUpperCase();
+    if (request.method === "GET" && !categoryId) {
+      const categories = await loadCategories();
+      sendJson(response, 200, categories.map(({ cost, ...category }) => category));
+      return true;
+    }
+    if (request.method === "POST" && !categoryId) {
+      if (!await requireAdmin(request, response)) return true;
+      const category = normalizeCategory(await readJson(request, 4096));
+      const categories = await loadCategories();
+      if (categories.some((entry) => entry.id === category.id || entry.slug === category.slug)) {
+        sendJson(response, 409, { error: "Já existe um tipo de peça com esse nome." });
+        return true;
+      }
+      categories.push(category);
+      await saveCategories(categories);
+      sendJson(response, 201, category);
+      return true;
+    }
+    if (request.method === "PUT" && categoryId) {
+      if (!await requireAdmin(request, response)) return true;
+      const body = await readJson(request, 4096);
+      if (!body || typeof body !== "object" || Array.isArray(body)) {
+        throw Object.assign(new Error("Dados do tipo de peça inválidos."), { status: 400 });
+      }
+      const categories = await loadCategories();
+      const index = categories.findIndex((entry) => entry.id === categoryId);
+      if (index < 0) {
+        sendJson(response, 404, { error: "Tipo de peça não encontrado." });
+        return true;
+      }
+      categories[index] = { ...categories[index], cost: normalizeOptionalCost(body.cost) };
+      await saveCategories(categories);
+      sendJson(response, 200, categories[index]);
+      return true;
+    }
+    sendJson(response, 405, { error: "Método não permitido." }, { Allow: "GET, POST, PUT" });
+    return true;
+  }
+
+  if (url.pathname === "/api/sales") {
+    if (!await requireAdmin(request, response)) return true;
+    if (request.method === "GET") {
+      sendJson(response, 200, await loadSales());
+      return true;
+    }
+    if (request.method === "POST") {
+      const body = await readJson(request, 4096);
+      const [products, categories] = await Promise.all([loadProducts(), loadCategories()]);
+      const sale = normalizeSale(body, products, categories);
+      await saveSale(sale);
+      sendJson(response, 201, sale);
+      return true;
+    }
+    sendJson(response, 405, { error: "Método não permitido." }, { Allow: "GET, POST" });
+    return true;
+  }
+
   if (url.pathname === "/api/images" && request.method === "POST") {
     if (!await requireAdmin(request, response)) return true;
     const requestMimeType = String(request.headers["content-type"] || "").split(";", 1)[0].trim().toLowerCase();
@@ -537,14 +767,18 @@ async function handleApi(request, response, url) {
 
   if (request.method === "GET" && !productId) {
     const products = await loadProducts();
-    const visibleProducts = await getSession(request) ? products : products.filter((product) => product.active !== false);
-    sendJson(response, 200, visibleProducts);
+    const isAdmin = await getSession(request);
+    const visibleProducts = isAdmin ? products : products.filter((product) => product.active !== false);
+    sendJson(response, 200, isAdmin
+      ? visibleProducts
+      : visibleProducts.map(({ cost, ...product }) => product));
     return true;
   }
 
   if (request.method === "POST" && !productId) {
     if (!await requireAdmin(request, response)) return true;
-    const product = normalizeProduct(await readJson(request, 64 * 1024));
+    const body = await readJson(request, 64 * 1024);
+    const product = normalizeProduct(body, await loadCategories());
     const products = await loadProducts();
     const savedProduct = { id: crypto.randomUUID(), ...product, createdAt: new Date().toISOString() };
     products.push(savedProduct);
@@ -555,7 +789,8 @@ async function handleApi(request, response, url) {
 
   if (request.method === "PUT" && productId) {
     if (!await requireAdmin(request, response)) return true;
-    const product = normalizeProduct(await readJson(request, 64 * 1024));
+    const body = await readJson(request, 64 * 1024);
+    const product = normalizeProduct(body, await loadCategories());
     const products = await loadProducts();
     const index = products.findIndex((entry) => entry.id === productId);
     if (index < 0) {
@@ -598,7 +833,7 @@ async function serveStatic(request, response, pathname) {
     sendJson(response, 400, { error: "Endereço inválido." });
     return;
   }
-  const categoryPage = /^\/categoria\/(bermudas|peruanas|oversized|kits)\/?$/.test(decodedPath);
+  const categoryPage = /^\/categoria\/[a-z0-9-]+\/?$/i.test(decodedPath);
   const relativePath = decodedPath === "/" || categoryPage
     ? "index.html"
     : decodedPath === adminPanelPath || decodedPath === `${adminPanelPath}/`

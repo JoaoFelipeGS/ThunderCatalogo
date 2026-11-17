@@ -1,13 +1,14 @@
-const CACHE_NAME = "thunder-sthormy-pwa-v16";
+const CACHE_NAME = "thunder-sthormy-pwa-v17";
 const IMAGE_CACHE = `${CACHE_NAME}-images`;
 const PRODUCT_CACHE = `${CACHE_NAME}-products`;
+const CATEGORY_CACHE = `${CACHE_NAME}-categories`;
 const CONFIG_CACHE = `${CACHE_NAME}-config`;
 const APP_SHELL = [
   "/",
   "/manifest.webmanifest",
-  "/styles.css?v=32",
+  "/styles.css?v=33",
   "/error-pages.css?v=1",
-  "/app.js?v=16",
+  "/app.js?v=17",
   "/assets/banner-thunder-sthormy.webp",
   "/assets/logo-thunder.jpg?v=2",
   "/assets/categories/bermudas.webp",
@@ -118,7 +119,7 @@ self.addEventListener("fetch", (event) => {
   if (request.mode === "navigate") {
     event.respondWith(networkFirst(request, CACHE_NAME).catch(async () => {
       if (url.pathname !== "/" && url.pathname !== "/index.html"
-        && !/^\/categoria\/(bermudas|peruanas|oversized|kits)\/?$/.test(url.pathname)) {
+        && !/^\/categoria\/[a-z0-9-]+\/?$/i.test(url.pathname)) {
         return new Response("Esta página precisa de conexão com a internet.", {
           status: 503,
           headers: { "Content-Type": "text/plain; charset=utf-8" },
@@ -135,6 +136,10 @@ self.addEventListener("fetch", (event) => {
 
   if (url.pathname === "/api/products") {
     event.respondWith(networkFirst(request, PRODUCT_CACHE, cachePublicProducts));
+    return;
+  }
+  if (url.pathname === "/api/categories") {
+    event.respondWith(networkFirst(request, CATEGORY_CACHE));
     return;
   }
   if (url.pathname === "/api/config") {

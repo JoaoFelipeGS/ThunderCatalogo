@@ -28,6 +28,12 @@ const viewerCount = document.querySelector("#viewer-count");
 
 let products = [];
 let selectedCategory = "";
+let categories = [
+  { id: "BERMUDA", name: "Bermudas", slug: "bermudas", image: "/assets/categories/bermudas.webp" },
+  { id: "PERUANA", name: "Peruanas", slug: "peruanas", image: "/assets/categories/peruanas.webp" },
+  { id: "OVERSIZED", name: "Oversized", slug: "oversized", image: "/assets/categories/oversized.webp" },
+  { id: "KIT", name: "Kits", slug: "kits", image: "/assets/categories/kits.webp" },
+];
 let catalogLoaded = false;
 let whatsappNumber = "";
 let cart = [];
@@ -41,23 +47,22 @@ let imageUploadsEnabled = true;
 let offlineCatalog = false;
 let installPrompt = null;
 
-const categoryLabels = {
-  BERMUDA: "Bermudas",
-  KIT: "Kits",
-  OVERSIZED: "Oversized",
-  PERUANA: "Peruana",
-};
-const categorySlugs = {
-  BERMUDA: "bermudas",
-  KIT: "kits",
-  OVERSIZED: "oversized",
-  PERUANA: "peruanas",
-};
+let categoryLabels = Object.fromEntries(categories.map((category) => [category.id, category.name]));
+let categorySlugs = Object.fromEntries(categories.map((category) => [category.id, category.slug]));
 selectedCategory = getCategoryFromPath();
 
 function getCategoryFromPath() {
-  const match = window.location.pathname.match(/^\/categoria\/(bermudas|peruanas|oversized|kits)\/?$/);
-  return Object.entries(categorySlugs).find(([, slug]) => slug === match?.[1])?.[0] || "";
+  const match = window.location.pathname.match(/^\/categoria\/([a-z0-9-]+)\/?$/);
+  return categories.find((category) => category.slug === match?.[1])?.id || "";
+}
+
+function renderCategoryCards() {
+  categoryGrid.innerHTML = categories.map((category) => `
+    <a class="category-card ${category.image ? "" : "category-card-custom"}" href="/categoria/${encodeURIComponent(category.slug)}" aria-label="Ver categoria ${escapeHtml(category.name)}">
+      ${category.image
+    ? `<img src="${escapeHtml(category.image)}" alt="Categoria ${escapeHtml(category.name)}" loading="lazy">`
+    : `<span class="category-card-label">${escapeHtml(category.name)}</span>`}
+    </a>`).join("");
 }
 
 try {
@@ -558,7 +563,12 @@ function openLogin() {
 }
 
 async function openDashboard() {
-  adminProducts = await api("/api/products");
+  [adminProducts, categories] = await Promise.all([
+    api("/api/products"),
+    api("/api/admin/categories"),
+  ]);
+  categoryLabels = Object.fromEntries(categories.map((category) => [category.id, category.name]));
+  categorySlugs = Object.fromEntries(categories.map((category) => [category.id, category.slug]));
   renderDashboard();
 }
 
@@ -792,7 +802,14 @@ async function logout() {
 }
 
 async function loadProducts() {
-  products = await api("/api/products");
+  [products, categories] = await Promise.all([
+    api("/api/products"),
+    api("/api/categories"),
+  ]);
+  categoryLabels = Object.fromEntries(categories.map((category) => [category.id, category.name]));
+  categorySlugs = Object.fromEntries(categories.map((category) => [category.id, category.slug]));
+  selectedCategory = getCategoryFromPath();
+  renderCategoryCards();
   catalogLoaded = true;
   renderProducts();
   renderCart();

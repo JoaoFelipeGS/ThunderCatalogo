@@ -71,6 +71,13 @@ test("segurança, autenticação e persistência Vercel", async () => {
     const [operation, ...args] = JSON.parse(Buffer.concat(chunks).toString("utf8"));
     let result = null;
     if (operation === "GET") result = records.get(args[0]) ?? null;
+    if (operation === "LRANGE") result = records.get(args[0]) ?? [];
+    if (operation === "RPUSH") {
+      const list = records.get(args[0]) || [];
+      list.push(...args.slice(1));
+      records.set(args[0], list);
+      result = list.length;
+    }
     if (operation === "SET") {
       if (args[2] !== "NX" || !records.has(args[0])) {
         records.set(args[0], args[1]);
@@ -109,6 +116,9 @@ test("segurança, autenticação e persistência Vercel", async () => {
     assert.match(sessionResponse.headers.get("content-security-policy"), /frame-ancestors 'none'/);
     assert.equal(sessionResponse.headers.get("strict-transport-security"), "max-age=31536000; includeSubDomains");
 
+    const unauthorizedSales = await fetch(`${catalog.baseUrl}/api/sales`);
+    assert.equal(unauthorizedSales.status, 401);
+
     const wrongOrigin = await fetch(`${catalog.baseUrl}/api/login`, {
       method: "POST",
       headers: { ...vercelHeaders({ Origin: "https://attacker.example" }), "Content-Type": "application/json" },
@@ -134,11 +144,98 @@ test("segurança, autenticação e persistência Vercel", async () => {
     assert.equal(authenticated.authenticated, true);
 
     const slugProduct = initialProducts.find((product) => product.id === "bermuda-diesel-azul");
+    const saleWithoutCost = await fetch(`${catalog.baseUrl}/api/sales`, {
+      method: "POST",
+      headers: { ...vercelHeaders({ Cookie: cookie }), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        productId: slugProduct.id,
+        size: "G",
+        quantity: 1,
+        unitPrice: 89.9,
+      }),
+    });
+    assert.equal(saleWithoutCost.status, 400);
+    assert.match((await saleWithoutCost.json()).error, /Cadastre o custo/);
+
+    const configuredProductResponse = await fetch(`${catalog.baseUrl}/api/products/${slugProduct.id}`, {
+      method: "PUT",
+      headers: { ...vercelHeaders({ Cookie: cookie }), "Content-Type": "application/json" },
+      body: JSON.stringify({ ...slugProduct, cost: 42.25 }),
+    });
+    assert.equal(configuredProductResponse.status, 200);
+    const productWithCost = await configuredProductResponse.json();
+    assert.equal(productWithCost.cost, 42.25);
+    const publicProduct = (await fetch(`${catalog.baseUrl}/api/products`).then((response) => response.json()))
+      .find((product) => product.id === productWithCost.id);
+    assert.equal(Object.hasOwn(publicProduct, "cost"), false);
+    const adminProduct = (await fetch(`${catalog.baseUrl}/api/products`, {
+      headers: { Cookie: cookie },
+    }).then((response) => response.json()))
+      .find((product) => product.id === productWithCost.id);
+    assert.equal(adminProduct.cost, 42.25);
+
+    const invalidCost = await fetch(`${catalog.baseUrl}/api/products/${slugProduct.id}`, {
+      method: "PUT",
+      headers: { ...vercelHeaders({ Cookie: cookie }), "Content-Type": "application/json" },
+      body: JSON.stringify({ ...productWithCost, cost: -1 }),
+    });
+    assert.equal(invalidCost.status, 400);
+
+    const recordedSale = await fetch(`${catalog.baseUrl}/api/sales`, {
+      method: "POST",
+      headers: { ...vercelHeaders({ Cookie: cookie }), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        productId: productWithCost.id,
+        size: "G",
+        quantity: 2,
+        unitPrice: 89.9,
+      }),
+    });
+    assert.equal(recordedSale.status, 201);
+    const sale = await recordedSale.json();
+    assert.equal(sale.productTitle, "Diesel");
+    assert.equal(sale.unitPriceCents, 8990);
+    assert.equal(sale.unitCostCents, 4225);
+    assert.equal(sale.quantity, 2);
+    assert.equal(sale.quantity * sale.unitPriceCents, 17980);
+    assert.equal(sale.quantity * (sale.unitPriceCents - sale.unitCostCents), 9530);
+    assert.ok(Date.parse(sale.soldAt));
+    const sales = await fetch(`${catalog.baseUrl}/api/sales`, {
+      headers: { Cookie: cookie },
+    }).then((response) => response.json());
+    assert.equal(sales.length, 1);
+    assert.equal(JSON.parse(records.get("thunder-sthormy:sales:v1")[0]).id, sale.id);
+
+    const invalidSale = await fetch(`${catalog.baseUrl}/api/sales`, {
+      method: "POST",
+      headers: { ...vercelHeaders({ Cookie: cookie }), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        productId: productWithCost.id,
+        size: "GG",
+        quantity: 1,
+        unitPrice: 89.9,
+      }),
+    });
+    assert.equal(invalidSale.status, 400);
+    assert.match((await invalidSale.json()).error, /tamanho disponível/);
+
+    const invalidPriceSale = await fetch(`${catalog.baseUrl}/api/sales`, {
+      method: "POST",
+      headers: { ...vercelHeaders({ Cookie: cookie }), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        productId: productWithCost.id,
+        size: "G",
+        quantity: 1,
+        unitPrice: 89.999,
+      }),
+    });
+    assert.equal(invalidPriceSale.status, 400);
+
     const editedSlugProduct = await fetch(`${catalog.baseUrl}/api/products/bermuda-diesel-azul`, {
       method: "PUT",
       headers: { ...vercelHeaders({ Cookie: cookie }), "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...slugProduct,
+        ...productWithCost,
         title: "Bermuda Diesel Azul editada",
       }),
     });
@@ -186,6 +283,7 @@ test("segurança, autenticação e persistência Vercel", async () => {
     assert.equal(records.has("thunder-sthormy:products:v1"), true);
     const savedProduct = await saved.json();
     assert.equal(savedProduct.category, "KIT");
+    assert.equal(savedProduct.cost, null);
 
     const edited = await fetch(`${catalog.baseUrl}/api/products/${savedProduct.id}`, {
       method: "PUT",

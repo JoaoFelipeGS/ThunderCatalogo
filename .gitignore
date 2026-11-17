@@ -5,3 +5,7 @@ node_modules/
 public/uploads/*
 !public/uploads/.gitkeep
 data/products.json.tmp
+data/categories.json
+data/categories.json.tmp
+data/sales.json
+data/sales.json.tmp

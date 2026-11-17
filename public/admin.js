@@ -2,13 +2,17 @@ const adminPage = document.querySelector("#admin-page");
 const productDialog = document.querySelector("#product-dialog");
 const toast = document.querySelector("#toast");
 
-const categoryLabels = {
+let categoryLabels = {
   BERMUDA: "Bermuda",
   OVERSIZED: "Oversized",
   PERUANA: "Peruana",
+  KIT: "Kits",
 };
 
 let products = [];
+let sales = [];
+let categories = [];
+let activeTab = "inventory";
 let imageUploadsEnabled = false;
 let editingId = null;
 let editingImages = [];
@@ -131,13 +135,26 @@ async function login(event) {
   }
 }
 
-async function loadProducts() {
-  products = await api("/api/products");
+async function openDashboard() {
+  [products, sales, categories] = await Promise.all([
+    api("/api/products"),
+    api("/api/sales"),
+    api("/api/admin/categories"),
+  ]);
+  categoryLabels = Object.fromEntries(categories.map((category) => [category.id, category.name]));
+  renderDashboard();
 }
 
-async function openDashboard() {
-  await loadProducts();
-  renderDashboard();
+function formatCurrency(value) {
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
+}
+
+function formatDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Data não disponível" : new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+  }).format(date);
 }
 
 function renderDashboard() {
@@ -159,41 +176,254 @@ function renderDashboard() {
         <div class="dashboard-heading">
           <div>
             <p class="eyebrow">Thunder Sthormy / Administração</p>
-            <h1>Estoque</h1>
-            <p>Gerencie as peças e a disponibilidade no catálogo.</p>
+            <h1>Painel da loja</h1>
+            <p>Gerencie o estoque e acompanhe o financeiro.</p>
           </div>
-          <button class="button" type="button" id="new-product">+ Nova peça</button>
         </div>
         ${imageUploadsEnabled ? "" : '<p class="notice">Você pode editar e excluir peças. Para cadastrar fotos novas, configure o Vercel Blob no ambiente Production.</p>'}
-        <div class="stats" aria-label="Resumo do estoque">
-          <article class="stat-card"><span>Peças cadastradas</span><strong>${products.length}</strong></article>
-          <article class="stat-card"><span>Disponíveis</span><strong>${inStock}</strong></article>
-          <article class="stat-card"><span>Indisponíveis</span><strong>${outOfStock}</strong></article>
-        </div>
-        <section class="inventory-panel" aria-labelledby="inventory-title">
-          <div class="inventory-toolbar">
-            <h2 id="inventory-title">Produtos</h2>
-            <div class="inventory-controls">
-              <label class="sr-only" for="inventory-search">Buscar produto</label>
-              <input class="inventory-search" id="inventory-search" type="search" placeholder="Buscar peça..." autocomplete="off">
-              <label class="sr-only" for="inventory-filter">Filtrar estoque</label>
-              <select class="inventory-filter" id="inventory-filter">
-                <option value="all">Todo estoque</option>
-                <option value="available">Disponíveis</option>
-                <option value="unavailable">Indisponíveis</option>
-              </select>
-            </div>
+        <nav class="admin-tabs" role="tablist" aria-label="Seções do painel">
+          <button class="admin-tab ${activeTab === "inventory" ? "is-active" : ""}" type="button" role="tab" id="inventory-tab" aria-controls="inventory-panel" aria-selected="${activeTab === "inventory"}" data-tab="inventory">Estoque</button>
+          <button class="admin-tab ${activeTab === "finance" ? "is-active" : ""}" type="button" role="tab" id="finance-tab" aria-controls="finance-panel" aria-selected="${activeTab === "finance"}" data-tab="finance">Financeiro</button>
+        </nav>
+        <section class="dashboard-tab" id="inventory-panel" role="tabpanel" aria-labelledby="inventory-tab" ${activeTab === "inventory" ? "" : "hidden"}>
+          <div class="dashboard-tab-heading">
+            <div><h2>Estoque</h2><p>Gerencie as peças e a disponibilidade no catálogo.</p></div>
+            <button class="button" type="button" id="new-product">+ Nova peça</button>
           </div>
-          <div class="product-list" id="product-list"></div>
-          <div class="inventory-footer" id="inventory-count"></div>
+          <div class="stats" aria-label="Resumo do estoque">
+            <article class="stat-card"><span>Peças cadastradas</span><strong>${products.length}</strong></article>
+            <article class="stat-card"><span>Disponíveis</span><strong>${inStock}</strong></article>
+            <article class="stat-card"><span>Indisponíveis</span><strong>${outOfStock}</strong></article>
+          </div>
+          <section class="inventory-panel" aria-labelledby="inventory-title">
+            <div class="inventory-toolbar">
+              <h2 id="inventory-title">Produtos</h2>
+              <div class="inventory-controls">
+                <label class="sr-only" for="inventory-search">Buscar produto</label>
+                <input class="inventory-search" id="inventory-search" type="search" placeholder="Buscar peça..." autocomplete="off">
+                <label class="sr-only" for="inventory-filter">Filtrar estoque</label>
+                <select class="inventory-filter" id="inventory-filter">
+                  <option value="all">Todo estoque</option>
+                  <option value="available">Disponíveis</option>
+                  <option value="unavailable">Indisponíveis</option>
+                </select>
+              </div>
+            </div>
+            <div class="product-list" id="product-list"></div>
+            <div class="inventory-footer" id="inventory-count"></div>
+          </section>
+        </section>
+        <section class="dashboard-tab finance-panel" id="finance-panel" role="tabpanel" aria-labelledby="finance-tab" ${activeTab === "finance" ? "" : "hidden"}>
+          <div class="dashboard-tab-heading">
+            <div><h2>Financeiro</h2><p>Cadastre custos por tipo de peça e registre as vendas.</p></div>
+          </div>
+          <div class="stats sales-stats" aria-label="Resumo financeiro">
+            <article class="stat-card"><span>Vendas registradas</span><strong>${sales.length}</strong></article>
+            <article class="stat-card"><span>Faturamento bruto</span><strong>${formatCurrency(sales.reduce((total, sale) => total + sale.quantity * sale.unitPriceCents, 0) / 100)}</strong></article>
+            <article class="stat-card"><span>Lucro bruto</span><strong>${formatCurrency(sales.reduce((total, sale) => total + sale.quantity * (sale.unitPriceCents - sale.unitCostCents), 0) / 100)}</strong></article>
+          </div>
+          <p class="sales-note">O lucro bruto usa o custo do tipo de peça salvo no momento da venda. Taxas, frete e impostos não estão incluídos.</p>
+          <section class="category-costs" aria-labelledby="category-costs-title">
+            <div class="sales-heading">
+              <div><h3 id="category-costs-title">Custos por tipo de peça</h3><p>O mesmo custo será aplicado aos produtos do tipo escolhido.</p></div>
+            </div>
+            <form class="new-category-form" id="category-form">
+              <div class="field"><label for="category-name">Novo tipo de peça</label><input id="category-name" name="name" maxlength="50" required placeholder="Ex.: Calças"></div>
+              <div class="field"><label for="category-cost">Custo por unidade (R$)</label><input id="category-cost" name="cost" type="number" min="0" max="10000000" step="0.01" placeholder="Opcional"></div>
+              <button class="button" type="submit">Adicionar tipo</button>
+            </form>
+            <div class="category-cost-list" id="category-cost-list">
+              ${categories.map((category) => `
+                <form class="category-cost-row" data-category-id="${escapeHtml(category.id)}">
+                  <strong>${escapeHtml(category.name)}</strong>
+                  <div class="field"><label for="cost-${escapeHtml(category.id)}">Custo por unidade (R$)</label><input id="cost-${escapeHtml(category.id)}" name="cost" type="number" min="0" max="10000000" step="0.01" value="${category.cost === null || category.cost === undefined ? "" : escapeHtml(Number(category.cost).toFixed(2))}" placeholder="Não cadastrado"></div>
+                  <button class="button button-light" type="submit">Salvar custo</button>
+                </form>`).join("")}
+            </div>
+          </section>
+          <div class="sales-layout">
+            <form class="sales-form" id="sale-form">
+              <h3>Registrar venda</h3>
+              <p class="sales-form-description">Escolha a peça e informe a quantidade e o valor de venda por unidade. O custo vem do tipo da peça.</p>
+              <div class="field">
+                <label for="sale-product">Peça</label>
+                <select id="sale-product" name="productId" required>
+                  <option value="">Selecione uma peça</option>
+                  ${products.map((product) => `<option value="${escapeHtml(product.id)}">${escapeHtml(categoryLabels[product.category] || product.category)} · ${escapeHtml(product.title)} — ${escapeHtml(product.color)}${product.active === false ? " (indisponível)" : ""}</option>`).join("")}
+                </select>
+              </div>
+              <div class="sales-form-row">
+                <div class="field">
+                  <label for="sale-quantity">Quantidade</label>
+                  <input id="sale-quantity" name="quantity" type="number" min="1" max="999" step="1" value="1" required>
+                </div>
+                <div class="field">
+                  <label for="sale-size">Tamanho</label>
+                  <select id="sale-size" name="size">
+                    <option value="">Não se aplica</option>
+                  </select>
+                </div>
+              </div>
+              <div class="sales-form-row">
+                <div class="field">
+                  <label for="sale-price">Venda por unidade (R$)</label>
+                  <input id="sale-price" name="unitPrice" type="number" min="0.01" max="10000000" step="0.01" required>
+                </div>
+              </div>
+              <p class="sale-cost-note" id="sale-cost-note" aria-live="polite">Selecione uma peça para ver o custo do tipo.</p>
+              <p class="form-error" id="sale-error" role="alert"></p>
+              <button class="button button-full" type="submit" disabled>Salvar venda</button>
+            </form>
+            <section class="sales-history" aria-labelledby="sales-history-title">
+              <h3 id="sales-history-title">Vendas registradas</h3>
+              <div class="sales-list" id="sales-list"></div>
+            </section>
+          </div>
         </section>
       </section>
     </div>`;
+  adminPage.querySelectorAll("[data-tab]").forEach((button) => {
+    button.addEventListener("click", () => {
+      activeTab = button.dataset.tab;
+      renderDashboard();
+    });
+  });
   adminPage.querySelector("#new-product").addEventListener("click", () => openProductForm());
   adminPage.querySelector("#logout-button").addEventListener("click", logout);
   adminPage.querySelector("#inventory-search").addEventListener("input", renderProductRows);
   adminPage.querySelector("#inventory-filter").addEventListener("change", renderProductRows);
+  adminPage.querySelector("#sale-product").addEventListener("change", updateSaleProductFields);
+  adminPage.querySelector("#sale-form").addEventListener("submit", recordSale);
+  adminPage.querySelector("#category-form").addEventListener("submit", createCategory);
+  adminPage.querySelectorAll(".category-cost-row").forEach((form) => {
+    form.addEventListener("submit", saveCategoryCost);
+  });
+  renderSaleRows();
   renderProductRows();
+}
+
+function updateSaleProductFields() {
+  const product = products.find((entry) => entry.id === adminPage.querySelector("#sale-product").value);
+  const category = categories.find((entry) => entry.id === product?.category);
+  const sizeSelect = adminPage.querySelector("#sale-size");
+  const sizes = Array.isArray(product?.sizes) ? product.sizes : [];
+  sizeSelect.innerHTML = sizes.length
+    ? sizes.map((size) => `<option value="${escapeHtml(size)}">${escapeHtml(size)}</option>`).join("")
+    : '<option value="">Não se aplica</option>';
+  sizeSelect.required = sizes.length > 0;
+  const priceInput = adminPage.querySelector("#sale-price");
+  priceInput.value = product?.price ? Number(product.price).toFixed(2) : "";
+  const costNote = adminPage.querySelector("#sale-cost-note");
+  const hasCost = category?.cost !== null
+    && category?.cost !== undefined
+    && Number.isFinite(Number(category.cost))
+    && Number(category.cost) >= 0;
+  costNote.textContent = !product
+    ? "Selecione uma peça para ver o custo do tipo."
+    : hasCost
+      ? `Custo de ${category.name}: ${formatCurrency(Number(category.cost))} por unidade.`
+      : `Cadastre o custo de ${category?.name || "este tipo"} na aba Financeiro antes de registrar a venda.`;
+  adminPage.querySelector('#sale-form button[type="submit"]').disabled = !hasCost;
+}
+
+async function recordSale(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const error = adminPage.querySelector("#sale-error");
+  const button = form.querySelector('button[type="submit"]');
+  error.textContent = "";
+  button.disabled = true;
+  try {
+    const formData = new FormData(form);
+    const sale = await api("/api/sales", {
+      method: "POST",
+      body: JSON.stringify({
+        productId: formData.get("productId"),
+        quantity: formData.get("quantity"),
+        size: formData.get("size"),
+        unitPrice: formData.get("unitPrice"),
+      }),
+    });
+    sales.push(sale);
+    renderDashboard();
+    showToast("Venda registrada.");
+  } catch (saleError) {
+    error.textContent = saleError.message;
+    button.disabled = false;
+  }
+}
+
+function renderSaleRows() {
+  const list = adminPage.querySelector("#sales-list");
+  if (!list) return;
+  const latestSales = [...sales].sort((first, second) => new Date(second.soldAt) - new Date(first.soldAt));
+  list.innerHTML = latestSales.length ? latestSales.map((sale) => {
+    const revenue = sale.quantity * sale.unitPriceCents;
+    const profit = sale.quantity * (sale.unitPriceCents - sale.unitCostCents);
+    const detail = [
+      sale.categoryName || categoryLabels[sale.categoryId] || "",
+      `${sale.quantity} un.`,
+      sale.size ? `Tam. ${sale.size}` : "",
+      sale.color,
+      formatDate(sale.soldAt),
+    ].filter(Boolean).map(escapeHtml).join(" · ");
+    return `
+      <article class="sale-row">
+        <div class="sale-main">
+          <strong>${escapeHtml(sale.productTitle)}</strong>
+          <span>${detail}</span>
+        </div>
+        <div class="sale-values">
+          <strong>${formatCurrency(revenue / 100)}</strong>
+          <span>Lucro ${formatCurrency(profit / 100)}</span>
+        </div>
+      </article>`;
+  }).join("") : '<p class="sales-empty">Nenhuma venda registrada.</p>';
+}
+
+async function createCategory(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const button = form.querySelector('button[type="submit"]');
+  const formData = new FormData(form);
+  button.disabled = true;
+  try {
+    const category = await api("/api/categories", {
+      method: "POST",
+      body: JSON.stringify({
+        name: formData.get("name"),
+        cost: formData.get("cost") || null,
+      }),
+    });
+    categories.push(category);
+    categoryLabels[category.id] = category.name;
+    renderDashboard();
+    showToast("Tipo de peça cadastrado.");
+  } catch (error) {
+    showToast(error.message, true);
+    button.disabled = false;
+  }
+}
+
+async function saveCategoryCost(event) {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const categoryId = form.dataset.categoryId;
+  const button = form.querySelector('button[type="submit"]');
+  const formData = new FormData(form);
+  button.disabled = true;
+  try {
+    const category = await api(`/api/categories/${encodeURIComponent(categoryId)}`, {
+      method: "PUT",
+      body: JSON.stringify({ cost: formData.get("cost") || null }),
+    });
+    categories = categories.map((entry) => entry.id === category.id ? category : entry);
+    renderDashboard();
+    showToast(`Custo de ${category.name} atualizado.`);
+  } catch (error) {
+    showToast(error.message, true);
+    button.disabled = false;
+  }
 }
 
 function renderProductRows() {
