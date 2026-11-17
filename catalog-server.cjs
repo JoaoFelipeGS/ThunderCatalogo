@@ -663,7 +663,7 @@ async function handleApi(request, response, url) {
       sendJson(response, 201, category);
       return true;
     }
-    if (request.method === "PUT" && categoryId) {
+    
       if (!await requireAdmin(request, response)) return true;
       const body = await readJson(request, 4096);
       if (!body || typeof body !== "object" || Array.isArray(body)) {
@@ -706,7 +706,7 @@ async function handleApi(request, response, url) {
     if (!await requireAdmin(request, response)) return true;
     const requestMimeType = String(request.headers["content-type"] || "").split(";", 1)[0].trim().toLowerCase();
     const imageMimeTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
-    let mimeType;
+    let mimeType;if (request.method === "PUT" && categoryId) {
     let image;
     if (imageMimeTypes.has(requestMimeType)) {
       mimeType = requestMimeType;
